@@ -1,0 +1,946 @@
+/* Archivos. Estilos compartidos por la portada y la vista de lectura. */
+
+:root {
+  color-scheme: light dark;
+
+  /* Grises base. El texto, los fondos y los bordes usan los tokens por función de más abajo.
+     Los grises sueltos quedan solo para detalles de dibujo, como la miniatura. */
+  --gris-100: #fcfcfc;
+  --gris-200: #f6f6f6;
+  --gris-300: #f0f0f0;
+  --gris-400: #e8e8e8;
+  --gris-500: #e0e0e0;
+  --gris-600: #d9d9d9;
+  --gris-700: #cecece;
+  --gris-800: #bbbbbb;
+  --gris-900: #8d8d8d;
+  --gris-1000: #747474;
+  --gris-1100: #646464;
+  --gris-1200: #202020;
+
+  /* Por función. Apuntan a los grises, así el modo oscuro solo cambia la escala. */
+  --fondo: var(--gris-100);
+  --fondo-hover: var(--gris-200);
+  --fondo-pulsado: var(--gris-300);
+  --borde: var(--gris-400);
+  --trazo: var(--gris-600);
+  --foco: var(--gris-900);
+  --texto: var(--gris-1200);
+  --texto-suave: var(--gris-1100);
+  /* El gris más claro que todavía pasa 4,5:1 sobre el fondo, en claro y en oscuro */
+  --texto-tenue: var(--gris-1000);
+
+  --parrafo: #424242;
+  --tarjeta: #ffffff;
+  --sombra-tarjeta: 0 0 0 1px #0000000f, 0 1px 2px -1px #0000000f, 0 2px 4px 0 #0000000a;
+  --nuevo-fondo: #e7f0ff;
+  --nuevo-texto: #1a5fd6;
+
+  /* Tres tamaños. El chico para lo que acompaña, el base para leer y el del título. */
+  --letra-chica: 13px;
+  --letra-base: 16px;
+  --letra-titulo: 30px;
+
+  --fuente-texto: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fuente-titulo: "Fraunces", Georgia, "Times New Roman", serif;
+  --fuente-codigo: "Geist Mono", ui-monospace, "Cascadia Code", Consolas, monospace;
+
+  /* Movimiento del índice y de los submenús */
+  --curva-revelar: cubic-bezier(.16, 1, .3, 1);
+  --revelar-fila: height .3s var(--curva-revelar);
+  --revelar-entrar: opacity .4s ease, filter .55s var(--curva-revelar), translate .55s var(--curva-revelar);
+  --revelar-salir: opacity .15s ease, filter .3s var(--curva-revelar), translate .3s var(--curva-revelar);
+  --revelar-desenfoque: 4px;
+  --revelar-desplazamiento: -4px;
+  --revelar-paso: 50ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --gris-100: #0f0f0f;
+    --gris-200: #1c1c1c;
+    --gris-300: #232323;
+    --gris-400: #2b2b2b;
+    --gris-500: #323232;
+    --gris-600: #3b3b3b;
+    --gris-700: #494949;
+    --gris-800: #5f5f5f;
+    --gris-900: #6e6e6e;
+    --gris-1000: #8f8f8f;
+    --gris-1100: #b4b4b4;
+    --gris-1200: #ededed;
+
+    --parrafo: #cfcfcf;
+    --tarjeta: #161616;
+    --sombra-tarjeta: 0 0 0 1px #ffffff1a, 0 1px 2px -1px #00000080, 0 2px 4px 0 #0006;
+    --nuevo-fondo: #12233f;
+    --nuevo-texto: #9ec2ff;
+  }
+}
+
+/* Base */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-gutter: stable;
+  /* El toque lo marca el estado :active de cada elemento, no el gris del sistema */
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--fuente-texto);
+  font-size: var(--letra-base);
+  line-height: 1.625;
+  font-feature-settings: "cv01";
+  font-variation-settings: "opsz" auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.solo-lectores {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* 608 deja el texto en 560px, unos 72 caracteres por línea */
+.columna {
+  max-width: 608px;
+  margin: 0 auto;
+  padding: 48px 24px;
+}
+
+@media (min-width: 640px) {
+  .columna { padding-block: 96px; }
+}
+
+/* Entrada al cargar. Cada bloque llega desenfocado y un poco más abajo. */
+
+.entrar {
+  animation: entrar .9s var(--curva-revelar) both;
+  animation-delay: calc(var(--paso, 0) * 120ms);
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+    filter: blur(4px);
+  }
+}
+
+/* Avatar. Arriba a la izquierda, fijo en pantallas anchas. */
+
+.avatar {
+  display: flex;
+  width: fit-content;
+  margin: -8px 0 88px -8px;
+  padding: 8px;
+  border-radius: 999px;
+  text-decoration: none;
+  user-select: none;
+}
+
+.avatar-imagen {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--texto);
+  color: var(--fondo);
+  /* Las iniciales son un dibujo, no texto de lectura, por eso quedan fuera de la escala */
+  font-size: 8.5px;
+  font-weight: 600;
+  letter-spacing: .02em;
+  line-height: 1;
+  transition: scale .2s ease-out;
+}
+
+@media (hover: hover) {
+  .avatar:hover .avatar-imagen { scale: 1.1; }
+}
+
+.avatar:active .avatar-imagen { scale: .97; }
+
+/* En la vista de lectura el avatar lleva al lado el enlace de vuelta a la portada */
+.avatar-con-volver {
+  align-items: center;
+  gap: 8px;
+  padding-right: 12px;
+}
+
+.avatar-volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1;
+  transition: color .2s ease-out;
+}
+
+.avatar-volver svg {
+  width: 16px;
+  height: 16px;
+  transition: translate .3s var(--curva-revelar);
+}
+
+@media (hover: hover) {
+  .avatar-con-volver:hover .avatar-volver { color: var(--texto); }
+  .avatar-con-volver:hover .avatar-volver svg { translate: -2px 0; }
+}
+
+.avatar-con-volver:active .avatar-volver { opacity: .7; }
+
+@media (min-width: 1280px) {
+  .avatar {
+    position: fixed;
+    top: 88px;
+    left: 40px;
+    margin: 0;
+    z-index: 10;
+  }
+}
+
+/* Cabecera de página */
+
+.titulo {
+  margin: 0 0 8px;
+  font-family: var(--fuente-titulo);
+  font-weight: 300;
+  font-size: var(--letra-titulo);
+  line-height: 1.13;
+  letter-spacing: -0.01em;
+  font-variation-settings: "SOFT" 60, "opsz" 30;
+  text-wrap: balance;
+  color: var(--texto);
+}
+
+/* Equilibrada para que la columna más angosta no deje una o dos palabras solas abajo */
+.bajada {
+  margin: 0 0 32px;
+  color: var(--texto-suave);
+  text-wrap: balance;
+}
+
+.bajada:has(+ .meta) { margin-bottom: 12px; }
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 8px;
+  margin: 0 0 32px;
+}
+
+.meta > * + *::before {
+  content: "·";
+  margin-right: 8px;
+  color: var(--gris-800);
+}
+
+.meta a {
+  color: var(--texto-suave);
+  text-decoration: underline;
+  text-decoration-color: var(--trazo);
+  text-underline-offset: 3px;
+  transition: color .2s, text-decoration-color .2s;
+}
+
+@media (hover: hover) {
+  .meta a:hover { color: var(--texto); text-decoration-color: var(--texto-suave); }
+}
+
+.meta a:active { opacity: .7; }
+
+/* Índice lateral. Cerrado es una columna de rayas, abierto muestra los títulos. */
+
+.indice {
+  position: fixed;
+  top: 160px;
+  left: 32px;
+  z-index: 10;
+  display: none;
+  width: 244px;
+  max-height: calc(100vh - 342px);
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.indice::-webkit-scrollbar { display: none; }
+
+@media (min-width: 1280px) {
+  .indice { display: block; }
+}
+
+.indice-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  transition: gap .45s var(--curva-revelar);
+}
+
+.indice-fila {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 10px;
+  padding: 0 16px;
+  border-radius: 8px;
+  overflow: hidden;
+  text-decoration: none;
+  transition: var(--revelar-fila), background-color .2s ease-out;
+}
+
+.indice-fila:focus-visible { outline-offset: -2px; border-radius: 8px; }
+
+.indice-raya-caja {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  width: 22px;
+  transform-origin: left center;
+  transition: opacity .25s ease, scale .3s var(--curva-revelar);
+}
+
+.indice-raya {
+  flex-shrink: 0;
+  width: 12px;
+  height: 1.5px;
+  border-radius: 999px;
+  background: var(--trazo);
+  transition: width .2s ease-out, background-color .2s ease-out;
+}
+
+.indice-fila[aria-current] .indice-raya {
+  width: 22px;
+  background: var(--texto);
+}
+
+.indice-texto {
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 50%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  line-height: 1.5;
+  opacity: 0;
+  filter: blur(var(--revelar-desenfoque));
+  translate: var(--revelar-desplazamiento) -50%;
+  transition: var(--revelar-salir), color .2s ease-out;
+}
+
+.indice-fila[aria-current] .indice-texto { color: var(--texto); }
+
+.indice:hover .indice-lista,
+.indice:has(:focus-visible) .indice-lista { gap: 4px; }
+
+.indice:hover .indice-fila,
+.indice:has(:focus-visible) .indice-fila {
+  height: 24px;
+  transition-delay: calc(var(--i, 0) * var(--revelar-paso)), 0s;
+}
+
+.indice:hover .indice-raya-caja,
+.indice:has(:focus-visible) .indice-raya-caja {
+  opacity: 0;
+  scale: .15 1;
+}
+
+.indice:hover .indice-texto,
+.indice:has(:focus-visible) .indice-texto {
+  opacity: 1;
+  filter: blur(0);
+  translate: 0 -50%;
+  transition: var(--revelar-entrar), color .2s ease-out;
+  transition-delay: calc(var(--i, 0) * var(--revelar-paso));
+}
+
+@media (hover: hover) {
+  .indice-fila:hover { background: var(--fondo-hover); }
+  .indice-fila:hover .indice-texto { color: var(--texto); }
+}
+
+.indice-fila:active { background: var(--fondo-pulsado); }
+
+/* Acciones. Abajo a la izquierda en pantallas anchas, al final del texto en el resto. */
+
+.acciones {
+  position: fixed;
+  bottom: 96px;
+  left: 32px;
+  z-index: 10;
+  display: none;
+  flex-direction: column;
+  gap: 4px;
+  width: 244px;
+}
+
+@media (min-width: 1280px) {
+  .acciones { display: flex; }
+}
+
+.accion {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 24px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  font: inherit;
+  line-height: 1;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color .2s ease-out, background-color .2s ease-out;
+}
+
+@media (hover: hover) {
+  .accion:hover { background: var(--fondo-hover); color: var(--texto); }
+}
+
+.accion:active { background: var(--fondo-pulsado); color: var(--texto); }
+
+.accion:focus-visible { outline-offset: -2px; border-radius: 8px; }
+
+.accion svg,
+.icono {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+/* Icono que cambia (copiar pasa a check) */
+
+.icono-cambio {
+  position: relative;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+}
+
+.icono-cambio svg {
+  position: absolute;
+  inset: 0;
+  transition: opacity .2s ease, scale .35s var(--curva-revelar), filter .35s var(--curva-revelar);
+}
+
+.icono-cambio .icono-despues,
+[data-hecho] .icono-cambio .icono-antes {
+  opacity: 0;
+  scale: .5;
+  filter: blur(2px);
+}
+
+[data-hecho] .icono-cambio .icono-despues {
+  opacity: 1;
+  scale: 1;
+  filter: blur(0);
+}
+
+/* Submenú de compartir. Se abre con el mismo movimiento que el índice. */
+
+.compartir {
+  display: flex;
+  flex-direction: column;
+}
+
+.submenu {
+  position: relative;
+  overflow: hidden;
+}
+
+.submenu::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 0;
+  left: 24px;
+  width: 1px;
+  background: var(--borde);
+}
+
+.submenu-entrada {
+  display: flex;
+  align-items: flex-end;
+  height: 0;
+  overflow: hidden;
+  transition: var(--revelar-fila);
+}
+
+.submenu .accion {
+  flex: 1;
+  width: auto;
+  margin-left: 32px;
+  padding: 0 8px;
+}
+
+.submenu-texto {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  opacity: 0;
+  filter: blur(var(--revelar-desenfoque));
+  translate: var(--revelar-desplazamiento) 0;
+  transition: var(--revelar-salir);
+}
+
+.compartir[data-abierto] .submenu-entrada,
+.compartir:has(:focus-visible) .submenu-entrada {
+  height: 28px;
+  transition-delay: calc(var(--i, 0) * var(--revelar-paso));
+}
+
+.compartir[data-abierto] .submenu-texto,
+.compartir:has(:focus-visible) .submenu-texto {
+  opacity: 1;
+  filter: blur(0);
+  translate: 0;
+  transition: var(--revelar-entrar);
+  transition-delay: calc(var(--i, 0) * var(--revelar-paso));
+}
+
+@media (hover: hover) {
+  .compartir:hover .submenu-entrada {
+    height: 28px;
+    transition-delay: calc(var(--i, 0) * var(--revelar-paso));
+  }
+
+  .compartir:hover .submenu-texto {
+    opacity: 1;
+    filter: blur(0);
+    translate: 0;
+    transition: var(--revelar-entrar);
+    transition-delay: calc(var(--i, 0) * var(--revelar-paso));
+  }
+}
+
+/* Pie del artículo */
+
+.pie {
+  margin-top: 80px;
+  padding-top: 24px;
+  border-top: 1px solid var(--borde);
+}
+
+.pie-acciones {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 16px -16px;
+}
+
+.pie-acciones .accion { width: auto; }
+
+@media (min-width: 1280px) {
+  .pie-acciones { display: none; }
+}
+
+.volver {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  text-decoration: none;
+  transition: color .2s ease-out;
+}
+
+.volver svg { transition: translate .3s var(--curva-revelar); }
+
+@media (hover: hover) {
+  .volver:hover { color: var(--texto); }
+  .volver:hover svg { translate: -3px 0; }
+}
+
+.volver:active { opacity: .7; }
+
+/* Texto chico y tenue. Lo comparte todo lo que acompaña al texto principal.
+   Va después de las acciones para que el font: inherit de los botones no lo pise. */
+
+.avatar-volver,
+.meta,
+.indice-texto,
+.accion,
+.volver,
+.tema-cuenta,
+.fila-fecha,
+.prosa figcaption {
+  font-size: var(--letra-chica);
+  color: var(--texto-tenue);
+}
+
+/* Portada. Un bloque por tema y una fila por archivo. */
+
+.tema { margin-top: 48px; }
+/* Con los 32 de la bajada suma 56, lo mismo que separa un tema del siguiente */
+.tema:first-of-type { margin-top: 24px; }
+
+.tema-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 12px;
+  font-size: var(--letra-base);
+  font-weight: 550;
+  line-height: 1.625;
+  color: var(--texto);
+  scroll-margin-top: 80px;
+}
+
+.tema-cuenta {
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.lista {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Fondo que se desliza de una fila a otra al mover el cursor */
+.lista-resalte {
+  position: absolute;
+  top: 0;
+  left: -8px;
+  right: -8px;
+  height: 0;
+  border-radius: 17px;
+  background: var(--fondo-hover);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease-out, translate .25s var(--curva-revelar), height .25s var(--curva-revelar);
+}
+
+.lista-resalte[data-quieto] { transition: opacity .2s ease-out; }
+
+.fila {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: 17px;
+  text-decoration: none;
+  transition: background-color .15s ease-out;
+}
+
+/* Al pulsar se oscurece sobre el resalte. En pantallas táctiles es la única respuesta. */
+.fila:active { background: var(--fondo-pulsado); }
+
+.fila:focus-visible { outline-offset: 0; border-radius: 17px; }
+
+.miniatura {
+  display: flex;
+  flex-shrink: 0;
+  padding: 3px;
+  border-radius: 9px;
+  box-shadow: var(--sombra-tarjeta);
+}
+
+.miniatura-hoja {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  width: 30px;
+  height: 30px;
+  padding: 4px;
+  border-radius: 6px;
+  background: var(--tarjeta);
+}
+
+.miniatura-hoja i {
+  display: block;
+  flex-shrink: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--gris-500);
+  transition: background-color .2s ease-out;
+}
+
+@media (hover: hover) {
+  .fila:hover .miniatura-hoja i { background: var(--gris-700); }
+}
+
+.fila-cuerpo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+/* Hasta dos líneas, así un título largo se lee entero en vez de cortarse a media palabra */
+.fila-titulo {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--texto);
+  text-wrap: pretty;
+}
+
+.fila-fecha {
+  flex-shrink: 0;
+  max-width: 50%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+
+.etiqueta-nuevo {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  height: 20px;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: var(--nuevo-fondo);
+  color: var(--nuevo-texto);
+  font-size: var(--letra-chica);
+  font-weight: 500;
+}
+
+/* En pantallas chicas la etiqueta pasa debajo del título */
+@media (max-width: 520px) {
+  .fila { gap: 12px; }
+  .fila-cuerpo { flex-wrap: wrap; gap: 4px 8px; }
+}
+
+/* Mensajes (vacío o error) */
+
+.aviso {
+  margin: 8px 0 0;
+  padding: 16px 20px;
+  border-radius: 12px;
+  background: var(--tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+  font-size: var(--letra-base);
+  color: var(--texto-suave);
+}
+
+.aviso code {
+  font-family: var(--fuente-codigo);
+  font-size: .9em;
+  color: var(--texto);
+}
+
+/* Texto del artículo, generado a partir del Markdown */
+
+.prosa {
+  color: var(--parrafo);
+  overflow-wrap: break-word;
+}
+
+.prosa > * { margin: 0 0 16px; }
+.prosa > :last-child { margin-bottom: 0; }
+
+/* Los subtítulos van al tamaño del texto. Se distinguen por peso, color y el aire de arriba. */
+.prosa h2,
+.prosa h3,
+.prosa h4 {
+  color: var(--texto);
+  font-size: var(--letra-base);
+  font-weight: 550;
+  line-height: 1.625;
+  scroll-margin-top: 80px;
+  text-wrap: balance;
+}
+
+.prosa h2 { margin: 64px 0 8px; }
+.prosa h3 { margin: 40px 0 8px; }
+.prosa h4 { margin: 32px 0 8px; color: var(--texto-suave); }
+
+.prosa strong { font-weight: 550; color: var(--texto); }
+
+.prosa a {
+  font-weight: 500;
+  color: var(--texto);
+  text-decoration: underline;
+  text-decoration-color: var(--trazo);
+  text-underline-offset: 3px;
+  transition: color .2s, text-decoration-color .2s;
+}
+
+@media (hover: hover) {
+  .prosa a:hover { text-decoration-color: var(--texto-suave); }
+}
+
+.prosa a:active { opacity: .7; }
+
+.prosa ul,
+.prosa ol { padding-left: 1.4em; }
+
+.prosa li { margin: 8px 0; padding-left: 4px; }
+.prosa li::marker { color: var(--texto-tenue); }
+.prosa ol > li::marker { font-variant-numeric: tabular-nums; }
+.prosa li > ul,
+.prosa li > ol { margin: 8px 0; }
+
+.prosa blockquote {
+  margin: 32px 0;
+  padding: 0 0 0 16px;
+  border-left: 1.5px solid var(--trazo);
+  color: var(--texto-suave);
+}
+
+.prosa blockquote > * { margin: 0 0 12px; }
+.prosa blockquote > :last-child { margin-bottom: 0; }
+
+/* El código en línea va un poco más chico porque la letra monoespaciada se ve más grande */
+.prosa code {
+  font-family: var(--fuente-codigo);
+  font-size: .875em;
+  padding: .1em .35em;
+  border-radius: 6px;
+  background: var(--tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+.prosa pre {
+  margin: 32px 0;
+  padding: 16px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  border-radius: 12px;
+  background: var(--tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+  font-size: var(--letra-chica);
+  line-height: 1.65;
+  tab-size: 2;
+  /* Las líneas largas pasan a la siguiente, así el bloque siempre cabe en el ancho de la columna */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  scrollbar-width: thin;
+  scrollbar-color: var(--trazo) transparent;
+}
+
+.prosa pre code {
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  font-size: inherit;
+}
+
+.prosa img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+.prosa p:has(> img:only-child) { margin: 32px 0; }
+
+.prosa figure { margin: 32px 0; }
+
+.prosa figcaption {
+  margin-top: 12px;
+  text-align: center;
+}
+
+.prosa hr {
+  height: 1px;
+  margin: 48px 0;
+  border: 0;
+  background: var(--borde);
+}
+
+.prosa .tabla {
+  margin: 32px 0;
+  overflow-x: auto;
+}
+
+.prosa table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--letra-base);
+  font-variant-numeric: tabular-nums;
+}
+
+.prosa th,
+.prosa td {
+  padding: 8px 12px 8px 0;
+  border-bottom: 1px solid var(--borde);
+  text-align: start;
+  vertical-align: top;
+}
+
+.prosa th:last-child,
+.prosa td:last-child { padding-right: 0; }
+
+.prosa [align="right"] { text-align: end; }
+.prosa [align="center"] { text-align: center; }
+
+.prosa th { font-weight: 550; color: var(--texto); }
+
+/* Pantallas táctiles. Lo que se toca llega a 44px de alto aunque se vea igual. */
+
+@media (pointer: coarse) {
+  .accion,
+  .volver { min-height: 44px; }
+
+  .compartir[data-abierto] .submenu-entrada,
+  .compartir:has(:focus-visible) .submenu-entrada { height: 44px; }
+}
+
+/* El avatar crece hacia afuera, así ni la imagen ni el título se mueven.
+   En pantallas anchas va fijo y no hace falta. */
+@media (pointer: coarse) and (max-width: 1279px) {
+  .avatar {
+    margin: -11px 0 85px -11px;
+    padding: 11px;
+  }
+}
+
+/* Menos movimiento si el sistema lo pide */
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+
+  .entrar { animation: none; }
+
+  .indice *,
+  .acciones *,
+  .lista-resalte,
+  .icono-cambio svg,
+  .avatar-imagen,
+  .avatar-volver svg,
+  .volver svg,
+  .fila {
+    transition-duration: .01ms !important;
+    transition-delay: 0s !important;
+  }
+}
