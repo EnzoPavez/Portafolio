@@ -6,7 +6,7 @@ export const PERFIL = {
   // Ruta a una foto (por ejemplo "avatar.jpg" dentro de esta carpeta). Vacío muestra las iniciales.
   avatar: "",
   // Dirección de la página principal del portafolio. Vacío deja el avatar de la portada sin enlace.
-  inicio: "",
+  inicio: "../../",
 };
 
 // Días que un archivo lleva la etiqueta "Nuevo" en la portada

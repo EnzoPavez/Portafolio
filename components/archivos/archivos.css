@@ -806,6 +806,35 @@ a { color: inherit; }
 .prosa li > ul,
 .prosa li > ol { margin: 8px 0; }
 
+/* Listas de tareas (- [ ] y - [x]). La casilla va donde iría la viñeta. Al sacarla del flujo,
+   el espacio que marked deja detrás queda al principio de la línea y desaparece, así el texto
+   se alinea con las líneas que le siguen. */
+.prosa li:has(> input[type="checkbox"]) {
+  position: relative;
+  list-style: none;
+}
+
+.prosa li > input[type="checkbox"] {
+  appearance: none;
+  position: absolute;
+  /* Centrada en la primera línea (alto de línea de 1,625em) */
+  top: calc(.8125em - 7px);
+  left: -18px;
+  font-size: inherit;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1.5px solid var(--trazo);
+  border-radius: 4px;
+  background: var(--tarjeta);
+}
+
+.prosa li > input[type="checkbox"]:checked {
+  border-color: var(--texto-suave);
+  background: var(--texto-suave);
+  box-shadow: inset 0 0 0 2.5px var(--tarjeta);
+}
+
 .prosa blockquote {
   margin: 32px 0;
   padding: 0 0 0 16px;

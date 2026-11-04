@@ -1,5 +1,18 @@
 [
-  "como-agregar-un-archivo",
-  "un-indice-que-se-esconde",
-  "chuleta-de-markdown"
+  "abac-control-de-acceso",
+  "auto-loader-en-databricks",
+  "broadcast-join-en-spark",
+  "change-data-feed-en-delta-lake",
+  "checkpoints-en-structured-streaming",
+  "data-skipping-en-databricks-y-fabric",
+  "deletion-vectors-en-delta-lake",
+  "delta-sharing-en-databricks-y-fabric",
+  "expectations-calidad-de-datos",
+  "ingesta-incremental-y-evolucion-del-esquema",
+  "optimize-vacuum-y-optimizaciones-delta",
+  "propiedades-de-tabla-delta",
+  "registro-de-transacciones-y-acid",
+  "runtime-2-en-fabric",
+  "time-travel-en-delta-lake",
+  "z-order-liquid-clustering-y-v-order"
 ]
