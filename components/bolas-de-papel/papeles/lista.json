@@ -1,0 +1,95 @@
+[
+  {
+    "id": "diorama-v3",
+    "tipo": "foto",
+    "imagen": "diorama-v3.jpg",
+    "pie": "San Rafael, v3",
+    "alt": "Foto arrugada de una versión vieja del diorama de San Rafael"
+  },
+  {
+    "id": "nota-comentarios",
+    "tipo": "nota",
+    "fecha": "4 nov",
+    "lineas": [
+      "¿comentarios en los artículos?",
+      "~Supabase~",
+      "~contador de visitas~",
+      "no hace falta todavía"
+    ],
+    "alt": "Nota arrugada con una idea que no siguió"
+  },
+  {
+    "id": "postit-newsletter",
+    "tipo": "nota",
+    "papel": "postit",
+    "lineas": [
+      "newsletter de datos",
+      "~cada lunes~",
+      "¿una vez al mes?"
+    ],
+    "alt": "Post-it arrugado con una idea a medias"
+  },
+  {
+    "id": "archivos-v1",
+    "tipo": "foto",
+    "imagen": "archivos-v1.jpg",
+    "alt": "Captura arrugada de la primera versión de Archivos"
+  },
+  {
+    "id": "nota-diorama",
+    "tipo": "nota",
+    "fecha": "27 oct",
+    "lineas": [
+      "diorama v10",
+      "~nieve en verano~",
+      "~más luces~",
+      "~un cóndor más~",
+      "la v9 queda así"
+    ],
+    "alt": "Nota arrugada con ideas tachadas para el diorama"
+  },
+  {
+    "id": "carta-propuesta",
+    "tipo": "carta",
+    "titulo": "PROPUESTA",
+    "fecha": "San Rafael, marzo de 2025",
+    "parrafos": [
+      "Hola, les escribo por el tablero de ventas que conversamos la semana pasada.",
+      "La idea es juntar los datos de las tres bodegas en un solo lugar y verlos casi en tiempo real, sin planillas de por medio.",
+      "Adjunto un primer boceto de la arquitectura y una estimación de tiempos. Quedo atento a sus comentarios."
+    ],
+    "firma": "Enzo",
+    "nombre": "Enzo Pavez",
+    "sello": "BORRADOR",
+    "alt": "Carta a máquina arrugada con una propuesta que no se mandó"
+  },
+  {
+    "id": "boceto-pipeline",
+    "tipo": "dibujo",
+    "imagen": "boceto-pipeline.png",
+    "papel": "cuadriculado",
+    "alt": "Boceto arrugado de un pipeline de datos"
+  },
+  {
+    "id": "polaroid-bodega",
+    "tipo": "foto",
+    "marco": "polaroid",
+    "imagen": "bodega.jpg",
+    "pie": "la bodega",
+    "alt": "Polaroid arrugada de la bodega del diorama"
+  },
+  {
+    "id": "boceto-portafolio",
+    "tipo": "dibujo",
+    "imagen": "boceto-portafolio.png",
+    "papel": "liso",
+    "alt": "Boceto arrugado de una primera idea del portafolio"
+  },
+  {
+    "id": "foto-rio",
+    "tipo": "foto",
+    "marco": "ninguno",
+    "imagen": "rio.jpg",
+    "alt": "Foto arrugada del río del diorama"
+  }
+]
