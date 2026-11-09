@@ -1,0 +1,979 @@
+/* Estantería de libros. Todo cuelga de .libreria y toma los tokens de la página si
+   existen (los mismos de la portada y Archivos), con valores propios por si no. */
+
+.libreria {
+  --l-fondo: var(--fondo, #fcfcfc);
+  --l-texto: var(--texto, #202020);
+  --l-suave: var(--texto-suave, #646464);
+  --l-trazo: var(--trazo, #d9d9d9);
+  --l-foco: var(--foco, #8d8d8d);
+  --l-letra: var(--fuente-texto, "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif);
+  --l-serif: var(--fuente-titulo, "Fraunces", Georgia, "Times New Roman", serif);
+  --l-curva: var(--curva-revelar, cubic-bezier(.16, 1, .3, 1));
+  --l-mover: 640ms cubic-bezier(.22, 1, .36, 1);
+  --l-sombra: rgb(0 0 0 / .17);
+  --l-borde-hoja: rgb(0 0 0 / .1);
+  --l-letra-rotulo: 11px;
+
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  height: 100%;
+  min-height: 480px;
+  overflow: clip;
+  container: libreria / size;
+  isolation: isolate;
+  background: var(--l-fondo);
+  color: var(--l-texto);
+  font-family: var(--l-letra);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Oscuro si lo pide el sistema o si se eligió en la barra del sitio (data-tema en <html>) */
+:root[data-tema="oscuro"] .libreria {
+  --l-sombra: rgb(0 0 0 / .55);
+  --l-borde-hoja: rgb(255 255 255 / .14);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) .libreria {
+    --l-sombra: rgb(0 0 0 / .55);
+    --l-borde-hoja: rgb(255 255 255 / .14);
+  }
+}
+
+.libreria *, .libreria *::before, .libreria *::after { box-sizing: border-box; }
+.libreria [hidden] { display: none !important; }
+
+.libreria :focus-visible {
+  outline: 2px solid var(--l-foco);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.libreria svg { display: block; }
+
+.lb-sin-transicion *,
+.lb-sin-transicion *::before,
+.lb-sin-transicion *::after { transition: none !important; }
+
+/* Cabecera. Queda por encima de la hoja y de la ficha. */
+.lb-cabecera {
+  position: relative;
+  z-index: 4;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 18px clamp(16px, 3cqw, 32px) 0;
+}
+
+.lb-izq { justify-self: start; }
+
+.lb-boton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--l-trazo);
+  border-radius: 999px;
+  background: var(--l-fondo);
+  color: var(--l-texto);
+  font: 500 var(--l-letra-rotulo) / 1 var(--l-letra);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color .2s ease-out;
+}
+
+/* Área de toque de 44 px sin agrandar el botón */
+.lb-boton::before {
+  content: "";
+  position: absolute;
+  inset: -7px -4px;
+}
+
+.lb-boton svg {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .lb-boton:hover { border-color: var(--l-foco); }
+}
+
+.libreria[data-estado="estante"] .lb-cerrar,
+.libreria:not([data-estado="estante"]) .lb-volver { display: none; }
+
+.lb-marca {
+  display: grid;
+  justify-items: center;
+  gap: 3px;
+  text-align: center;
+}
+
+.lb-marca-titulo {
+  font-family: var(--l-serif);
+  font-weight: 400;
+  font-size: 21px;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  font-variation-settings: "SOFT" 60, "opsz" 24;
+}
+
+.lb-marca-bajada {
+  color: var(--l-suave);
+  font-size: var(--l-letra-rotulo);
+  line-height: 1.3;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.lb-der {
+  justify-self: end;
+  display: grid;
+  justify-items: end;
+  margin: 0;
+  color: var(--l-suave);
+  font-size: var(--l-letra-rotulo);
+  line-height: 1.5;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  transition: opacity .3s ease-out;
+}
+
+.libreria:not([data-estado="estante"]) .lb-der { opacity: 0; }
+
+/* Años de lectura. Es un índice: marca el año del libro elegido y salta al primero de cada año. */
+.lb-indice {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: safe center;
+  padding: 22px 16px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.lb-indice::-webkit-scrollbar { display: none; }
+
+.lb-indice-grupo {
+  display: flex;
+  flex: none;
+  border: 1px solid var(--l-trazo);
+  border-radius: 8px;
+}
+
+.lb-anio {
+  position: relative;
+  height: 28px;
+  padding: 0 12px;
+  border: 0;
+  background: transparent;
+  color: var(--l-suave);
+  font: 500 var(--l-letra-rotulo) / 1 var(--l-letra);
+  letter-spacing: .06em;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition: background-color .3s ease-out, color .3s ease-out;
+}
+
+.lb-anio::before {
+  content: "";
+  position: absolute;
+  inset: -8px 0;
+}
+
+.lb-anio + .lb-anio { border-left: 1px solid var(--l-trazo); }
+.lb-anio:first-child { border-radius: 7px 0 0 7px; }
+.lb-anio:last-child { border-radius: 0 7px 7px 0; }
+
+.lb-anio[aria-pressed="true"] {
+  background: var(--l-texto);
+  color: var(--l-fondo);
+}
+
+@media (hover: hover) {
+  .lb-anio:not([aria-pressed="true"]):hover { color: var(--l-texto); }
+}
+
+/* Estantería */
+.lb-estante {
+  position: relative;
+  z-index: 1;
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.lb-pista {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translate3d(var(--arrastre, 0px), 0, 0);
+  transition: transform var(--l-mover);
+}
+
+.lb-arrastrando .lb-pista { transition: none; }
+
+.lb-libro {
+  position: absolute;
+  top: calc(50% - var(--h) / 2);
+  left: 0;
+  z-index: 1;
+  width: var(--w);
+  height: var(--h);
+  transform: translate3d(var(--x, 0px), 0, 0);
+  transition: transform var(--l-mover);
+  /* La caja mide lo que una tapa y taparía a los vecinos. Solo la zona recibe el mouse. */
+  pointer-events: none;
+}
+
+.lb-libro.lb-saliendo { z-index: 2; }
+.lb-libro.lb-activo { z-index: 3; }
+
+/* Lo que se toca. Mide lo que se ve del libro, no la caja entera. */
+.lb-zona {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 50%;
+  z-index: 2;
+  width: var(--vis);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  translate: -50% 0;
+  cursor: pointer;
+  pointer-events: auto;
+  transition: width var(--l-mover);
+}
+
+.lb-zona:focus-visible { outline-offset: 6px; }
+
+@media (hover: hover) and (pointer: fine) {
+  .lb-activo > .lb-zona { cursor: none; }
+}
+
+.lb-alza {
+  position: absolute;
+  inset: 0;
+  perspective: var(--perspectiva);
+  pointer-events: none;
+  transition: translate .35s var(--l-curva);
+}
+
+@media (hover: hover) {
+  .lb-libro:not(.lb-activo) > .lb-zona:hover ~ .lb-alza { translate: 0 calc(var(--h) * -.025); }
+}
+
+/* La caja del libro. De pie se ve el lomo (girada 90°). Elegido, gira hasta mostrar
+   la tapa, sale hacia adelante y queda un poco torcido para que se vea el lomo. */
+.lb-caja {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform: translateY(0) translateZ(calc(var(--w) / -2)) rotateY(90deg);
+  transition: transform var(--l-mover);
+}
+
+.lb-activo .lb-caja { transform: translateY(var(--subir)) translateZ(var(--tirar)) rotateY(var(--giro)); }
+
+.lb-cara {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+.lb-lomo {
+  left: calc(50% - var(--d) / 2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: calc(var(--h) * .028);
+  width: var(--d);
+  padding: calc(var(--h) * .05) 0 calc(var(--h) * .045);
+  overflow: hidden;
+  border-radius: 2px;
+  color: var(--c-texto);
+  background:
+    linear-gradient(to bottom,
+      transparent 2.6%,
+      color-mix(in srgb, var(--c-acento) 50%, transparent) 2.6% 3%,
+      transparent 3% 97%,
+      color-mix(in srgb, var(--c-acento) 50%, transparent) 97% 97.4%,
+      transparent 97.4%),
+    linear-gradient(90deg, rgb(0 0 0 / .22), rgb(255 255 255 / .1) 24%, rgb(255 255 255 / 0) 58%, rgb(0 0 0 / .17)),
+    var(--c-fondo);
+  transform: rotateY(-90deg) translateZ(calc(var(--w) / 2));
+}
+
+/* Elegido, el lomo queda de costado y más en sombra */
+.lb-lomo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+  transition: opacity var(--l-mover);
+}
+
+.lb-activo .lb-lomo::after { opacity: .3; }
+
+.lb-lomo-icono {
+  flex: none;
+  width: min(calc(var(--d) * .58), 22px);
+  height: auto;
+  aspect-ratio: 1;
+}
+
+.lb-lomo-titulo {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  font-family: var(--l-serif);
+  font-weight: 500;
+  font-size: min(calc(var(--d) * .46), calc(var(--h) * .05));
+  line-height: 1.04;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  font-variation-settings: "SOFT" 30, "opsz" 14;
+}
+
+.lb-lomo-titulo.lb-dos {
+  max-width: 88%;
+  white-space: normal;
+  text-wrap: balance;
+}
+
+.lb-lomo-titulo.lb-corta { text-overflow: ellipsis; }
+
+.lb-lomo-autor {
+  flex: none;
+  max-height: 32%;
+  overflow: hidden;
+  writing-mode: vertical-rl;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: var(--l-letra);
+  font-weight: 500;
+  font-size: min(calc(var(--d) * .27), calc(var(--h) * .026));
+  line-height: 1;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  opacity: .78;
+}
+
+.lb-lomo-marca {
+  flex: none;
+  width: min(calc(var(--d) * .3), 9px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--c-acento);
+}
+
+/* La primera página, debajo de la tapa. Es del color de la hoja que después crece. */
+.lb-paginas {
+  width: 100%;
+  border-radius: 0 2px 2px 0;
+  background: var(--l-fondo);
+  box-shadow: 0 0 0 1px var(--l-borde-hoja), 0 14px 30px -14px var(--l-sombra), inset 10px 0 14px -10px rgb(0 0 0 / .22);
+  transform: translateZ(calc(var(--d) / 2 - 1.5px));
+}
+
+/* La tapa gira sobre el borde del lomo para abrirse */
+.lb-tapa {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+  transform-origin: 0 50%;
+  transform: translateZ(calc(var(--d) / 2)) rotateY(0deg);
+  transition: transform var(--l-t-tapa, 560ms) cubic-bezier(.5, 0, .2, 1);
+}
+
+.lb-abierto .lb-tapa { transform: translateZ(calc(var(--d) / 2)) rotateY(-168deg); }
+
+.lb-tapa-frente {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1px 3px 3px 1px;
+  container-type: inline-size;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / .06);
+}
+
+.lb-tapa-reverso {
+  width: 100%;
+  border-radius: 3px 1px 1px 3px;
+  background: color-mix(in srgb, var(--c-fondo) 80%, #000);
+  transform: rotateY(180deg);
+}
+
+/* Sombra en el piso */
+.lb-sombra {
+  position: absolute;
+  bottom: calc(var(--h) * -.035);
+  left: 50%;
+  z-index: -1;
+  width: calc(var(--vis) * 1.2);
+  height: calc(var(--h) * .07);
+  background: radial-gradient(closest-side, var(--l-sombra), transparent);
+  translate: -50% 0;
+  pointer-events: none;
+  transition: width var(--l-mover);
+}
+
+/* El círculo "Abrir" que reemplaza al cursor sobre la tapa del elegido */
+.lb-abrir {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin: -38px 0 0 -38px;
+  border-radius: 50%;
+  background: var(--l-texto);
+  color: var(--l-fondo);
+  font: 600 var(--l-letra-rotulo) / 1 var(--l-letra);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  pointer-events: none;
+  scale: 0;
+  transition: scale .4s var(--l-curva);
+}
+
+.lb-abrir.lb-visible { scale: 1; }
+
+/* Pie: el título del elegido y las flechas */
+.lb-pie {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  padding: 0 clamp(8px, 2cqw, 24px) clamp(14px, 3cqh, 28px);
+}
+
+/* Siempre en la columna del medio, aunque las flechas salgan de la grilla (pantallas anchas) */
+.lb-rotulo {
+  grid-column: 2;
+  position: relative;
+  height: 104px;
+}
+
+.lb-rotulo-item {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.lb-rotulo-titulo {
+  display: -webkit-box;
+  max-width: 100%;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  font-family: var(--l-serif);
+  font-weight: 350;
+  font-size: clamp(21px, 2.3cqw, 28px);
+  line-height: 1.12;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  font-variation-settings: "SOFT" 60, "opsz" 28;
+}
+
+.lb-rotulo-autor {
+  font-size: var(--l-letra-rotulo);
+  font-weight: 550;
+  line-height: 1.3;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.lb-rotulo-anio {
+  color: var(--l-suave);
+  font-size: var(--l-letra-rotulo);
+  line-height: 1.3;
+  letter-spacing: .06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-flecha {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  margin-bottom: 30px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--l-texto);
+  cursor: pointer;
+  transition: opacity .2s ease-out, translate .3s var(--l-curva);
+}
+
+.lb-flecha svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lb-flecha[aria-disabled="true"] {
+  opacity: .25;
+  cursor: default;
+}
+
+@media (hover: hover) {
+  .lb-flecha[data-paso="-1"]:not([aria-disabled="true"]):hover { translate: -3px 0; }
+  .lb-flecha[data-paso="1"]:not([aria-disabled="true"]):hover { translate: 3px 0; }
+}
+
+/* La hoja que crece desde la página del libro hasta llenar todo */
+.lb-hoja {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: var(--l-fondo);
+  transform-origin: 50% 50%;
+  will-change: transform;
+}
+
+/* Ficha del libro abierto */
+.lb-ficha {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: center;
+  column-gap: 4cqw;
+  padding: 96px 7cqw 36px 9cqw;
+  overflow-y: auto;
+  /* Sin barra propia: la página ya tiene la suya y dos juntas se ven mal. Si el texto no
+     entra se sigue pudiendo desplazar con la rueda o el dedo. */
+  scrollbar-width: none;
+}
+
+.lb-ficha::-webkit-scrollbar { display: none; }
+
+.lb-ficha-texto {
+  max-width: 440px;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+.lb-ficha-autor {
+  margin: 0 0 18px;
+  font-size: var(--l-letra-rotulo);
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.lb-ficha-titulo {
+  margin: 0 0 24px;
+  font-family: var(--l-serif);
+  font-weight: 300;
+  /* También según el alto, para que la ficha entre sin desplazarse en estanterías bajas */
+  font-size: clamp(34px, min(6cqw, 9.5cqh), 84px);
+  line-height: 1.02;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  font-variation-settings: "SOFT" 50, "opsz" 96;
+}
+
+/* Un título largo con la letra del corto ocuparía cuatro líneas */
+.lb-ficha-titulo[data-largo] { font-size: clamp(30px, min(4.2cqw, 6.6cqh), 60px); }
+
+/* Cada palabra recorta su contenido para que entre desde abajo */
+.lb-palabra {
+  display: inline-block;
+  overflow: hidden;
+  padding: .1em 0 .12em;
+  margin: -.1em 0 -.12em;
+  vertical-align: top;
+}
+
+.lb-palabra > span { display: inline-block; }
+
+.lb-ficha-datos {
+  margin: 0 0 20px;
+  color: var(--l-suave);
+  font-size: var(--l-letra-rotulo);
+  font-weight: 500;
+  line-height: 1.5;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+.lb-ficha-sinopsis {
+  max-width: 40ch;
+  margin: 0 0 16px;
+  font-size: 16px;
+  line-height: 1.62;
+  text-wrap: pretty;
+}
+
+.lb-ficha-nota {
+  max-width: 40ch;
+  margin: 0 0 28px;
+  color: var(--l-suave);
+  font-family: var(--l-serif);
+  font-weight: 300;
+  font-size: 17px;
+  line-height: 1.5;
+  font-variation-settings: "SOFT" 60, "opsz" 17;
+  text-wrap: pretty;
+}
+
+.lb-ficha-etiquetas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  max-width: 44ch;
+  margin: 0 0 26px;
+  padding: 0;
+  list-style: none;
+}
+
+.lb-ficha-etiquetas li {
+  padding: 3px 10px;
+  border: 1px solid var(--l-trazo);
+  border-radius: 999px;
+  color: var(--l-suave);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.lb-ficha-boton {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px 0 16px;
+  border: 1px solid var(--l-trazo);
+  border-radius: 999px;
+  color: var(--l-texto);
+  font-size: var(--l-letra-rotulo);
+  font-weight: 500;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: border-color .2s ease-out;
+}
+
+.lb-ficha-boton svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+@media (hover: hover) {
+  .lb-ficha-boton:hover { border-color: var(--l-foco); }
+}
+
+.lb-ficha-tapa {
+  position: relative;
+  justify-self: center;
+  width: min(36cqw, (100cqh - 140px) * 2 / 3);
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 2px 4px 4px 2px;
+  container-type: inline-size;
+  box-shadow: 0 0 0 1px rgb(0 0 0 / 0), 0 30px 60px -30px rgb(0 0 0 / 0);
+  transition: box-shadow .8s ease-out;
+}
+
+.lb-ficha-tapa.lb-revelada {
+  box-shadow: 0 0 0 1px rgb(0 0 0 / .06), 0 30px 60px -30px rgb(0 0 0 / .35);
+}
+
+/* Lo mismo para las dos tapas: el pliegue junto al lomo */
+.lb-tapa-frente::after,
+.lb-ficha-tapa::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg,
+    rgb(0 0 0 / .22) 0,
+    rgb(255 255 255 / .14) 1.6%,
+    rgb(0 0 0 / .1) 3.2%,
+    transparent 7%,
+    transparent 94%,
+    rgb(0 0 0 / .06));
+  pointer-events: none;
+}
+
+/* Tapa dibujada, para los libros sin imagen. Mide todo en cqw, así sirve igual
+   en la estantería y en la ficha. */
+.lb-tapa-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.lb-tapa-gen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 11cqw 10cqw 0 11cqw;
+  overflow: hidden;
+  background: var(--c-fondo);
+  color: var(--c-texto);
+}
+
+.lb-tapa-gen-autor,
+.lb-tapa-gen-titulo { position: relative; }
+
+.lb-tapa-gen-autor {
+  font-family: var(--l-letra);
+  font-weight: 500;
+  font-size: 4.4cqw;
+  line-height: 1.3;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  opacity: .82;
+}
+
+.lb-tapa-gen-titulo {
+  margin-top: 4cqw;
+  font-family: var(--l-serif);
+  font-weight: 400;
+  font-size: 13.5cqw;
+  line-height: .98;
+  letter-spacing: -0.015em;
+  text-wrap: balance;
+  hyphens: auto;
+  font-variation-settings: "SOFT" 40, "opsz" 72;
+}
+
+.lb-tapa-gen[data-largo="medio"] .lb-tapa-gen-titulo { font-size: 11cqw; }
+.lb-tapa-gen[data-largo="largo"] .lb-tapa-gen-titulo { font-size: 9cqw; }
+
+.lb-tapa-gen-motivo {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 56%;
+}
+
+/* Tapa de certificado: como el certificado real, una tarjeta blanca sobre fondo azul
+   marino con un dibujo de pistas de circuito. Mide todo en cqw, igual que la otra tapa. */
+.lb-tapa-cert {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  padding: 8cqw;
+  background:
+    repeating-linear-gradient(90deg, rgb(255 255 255 / .05) 0 1px, transparent 1px 7cqw),
+    repeating-linear-gradient(0deg, rgb(255 255 255 / .05) 0 1px, transparent 1px 7cqw),
+    radial-gradient(120% 80% at 50% 0%, #2a4f8c, #16305a 70%);
+}
+
+.lb-tapa-cert-hoja {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 9cqw 7cqw 8cqw;
+  border-radius: 2.5cqw;
+  background: #fbfbfa;
+  color: #1b1b1b;
+  text-align: center;
+  box-shadow: 0 2cqw 6cqw -2cqw rgb(0 0 0 / .45);
+}
+
+.lb-tapa-cert-emisor {
+  color: #5e5e5e;
+  font-family: var(--l-letra);
+  font-size: 4.2cqw;
+  font-weight: 600;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.lb-tapa-cert-titulo {
+  margin-top: 5cqw;
+  font-family: var(--l-letra);
+  font-size: 8.4cqw;
+  font-weight: 650;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+}
+
+.lb-tapa-cert-insignia {
+  display: block;
+  width: 46cqw;
+  height: auto;
+  margin: auto 0;
+}
+
+.lb-tapa-cert-fecha {
+  color: #5e5e5e;
+  font-family: var(--l-letra);
+  font-size: 4.2cqw;
+  font-weight: 500;
+}
+
+/* Tapa de diploma: papel del color del libro, doble filete, el logo de la institución
+   arriba y el título al centro. Usa el mismo HTML que la de certificado. */
+.lb-tapa-cert[data-estilo="diploma"] {
+  padding: 6cqw;
+  background: var(--c-fondo);
+}
+
+.lb-tapa-cert[data-estilo="diploma"] .lb-tapa-cert-hoja {
+  justify-content: flex-start;
+  padding: 11cqw 8cqw 9cqw;
+  border: .5cqw solid color-mix(in srgb, var(--c-acento) 55%, transparent);
+  border-radius: 1cqw;
+  outline: .3cqw solid color-mix(in srgb, var(--c-acento) 35%, transparent);
+  outline-offset: -2.4cqw;
+  background: transparent;
+  color: var(--c-texto);
+  box-shadow: none;
+}
+
+.lb-tapa-cert[data-estilo="diploma"] .lb-tapa-cert-insignia {
+  order: -1;
+  width: 58cqw;
+  max-height: 26cqw;
+  margin: 0 0 9cqw;
+  object-fit: contain;
+}
+
+.lb-tapa-cert[data-estilo="diploma"] .lb-tapa-cert-emisor {
+  color: color-mix(in srgb, var(--c-texto) 70%, transparent);
+  font-size: 3.6cqw;
+}
+
+.lb-tapa-cert[data-estilo="diploma"] .lb-tapa-cert-titulo {
+  margin-top: 4cqw;
+  font-family: var(--l-serif);
+  font-size: 11.5cqw;
+  font-weight: 400;
+  line-height: 1.02;
+  font-variation-settings: "SOFT" 40, "opsz" 72;
+}
+
+.lb-tapa-cert[data-estilo="diploma"] .lb-tapa-cert-fecha {
+  margin-top: auto;
+  color: color-mix(in srgb, var(--c-texto) 70%, transparent);
+}
+
+.lb-m-fondo { fill: var(--c-fondo); }
+.lb-m-texto { fill: var(--c-texto); }
+.lb-m-acento { fill: var(--c-acento); }
+
+.lb-t-texto,
+.lb-t-acento {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.lb-t-texto { stroke: var(--c-texto); }
+.lb-t-acento { stroke: var(--c-acento); }
+
+/* Con un libro abierto, la cabecera tapa lo que pasa por debajo si la ficha se desplaza */
+.libreria:not([data-estado="estante"]) .lb-cabecera {
+  background: linear-gradient(var(--l-fondo) 72%, transparent);
+  padding-bottom: 14px;
+}
+
+/* En pantallas anchas las flechas van a los costados de los libros, a media altura.
+   La distancia y la altura las calcula libros.js (--flechas-dist, --flechas-y). */
+@container libreria (min-width: 721px) {
+  .lb-pie .lb-flecha {
+    position: absolute;
+    top: calc(var(--flechas-y, -240px) - 22px);
+    left: calc(50% - var(--flechas-dist, 40cqw) - 22px);
+    margin: 0;
+  }
+
+  .lb-pie .lb-flecha[data-paso="1"] { left: calc(50% + var(--flechas-dist, 40cqw) - 22px); }
+}
+
+@container libreria (max-width: 720px) {
+  .lb-der { display: none; }
+
+  /* Con un libro abierto no hay lugar para el título junto a "Cerrar", y la ficha ya dice
+     qué libro es */
+  .libreria:not([data-estado="estante"]) .lb-marca { visibility: hidden; }
+}
+
+/* Pantallas angostas o verticales: la ficha va en una columna con la tapa arriba */
+@container libreria (max-width: 720px) or ((orientation: portrait) and (max-width: 1100px)) {
+  .lb-ficha {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    align-items: start;
+    row-gap: 32px;
+    padding: 88px 24px 40px;
+  }
+
+  .lb-ficha-texto {
+    justify-self: center;
+    width: 100%;
+    max-width: 520px;
+  }
+
+  /* Alto fijo: si la ficha no entra en el alto, la fila de la tapa se encogería y la
+     tapa quedaría encima del texto. Así la ficha se desplaza y la tapa queda en su lugar. */
+  .lb-ficha-tapa {
+    order: -1;
+    width: auto;
+    height: min(72cqw, 280px);
+  }
+
+  .lb-ficha-titulo { font-size: clamp(36px, 10cqw, 64px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .libreria *,
+  .libreria *::before,
+  .libreria *::after { transition-duration: 0s !important; }
+}

@@ -3,112 +3,51 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Enzo Pavez</title>
-  <meta name="description" content="Portafolio de Enzo Pavez. Se va armando de a poco." />
+  <title>Enzo Pavez · Product Developer</title>
+  <meta name="description" content="Enzo Pavez, Product Developer. Diseño, construyo y entrego productos digitales." />
+  <meta property="og:type" content="profile" />
+  <meta property="og:site_name" content="Enzo Pavez" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:title" content="Enzo Pavez · Product Developer" />
+  <meta property="og:description" content="Diseño, construyo y entrego productos digitales. Perfil híbrido entre producto y datos." />
+  <meta property="og:url" content="https://portafolio-lake-eight.vercel.app/" />
   <meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:," />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..600,0..100&family=Inter:opsz,wght@14..32,400..600&display=swap" />
+  <link rel="stylesheet" href="estilos/sitio.css" />
+  <script>
+    // El modo claro u oscuro elegido en la barra, antes de pintar, para que no parpadee
+    try { const t = localStorage.getItem('tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; } catch {}
+  </script>
   <style>
-    /* Portada del portafolio. Usa los mismos tokens que Archivos para que se sienta un solo sitio. */
-    :root {
-      color-scheme: light dark;
-      --fondo: #fcfcfc;
-      --fondo-hover: #f6f6f6;
-      --trazo: #d9d9d9;
-      --foco: #8d8d8d;
-      --texto: #202020;
-      --texto-suave: #646464;
-      --tarjeta: #ffffff;
-      --sombra-tarjeta: 0 0 0 1px #0000000f, 0 1px 2px -1px #0000000f, 0 2px 4px 0 #0000000a;
-      --letra-chica: 13px;
-      --letra-base: 16px;
-      --letra-titulo: 30px;
-      --fuente-texto: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      --fuente-titulo: "Fraunces", Georgia, "Times New Roman", serif;
-      --curva-revelar: cubic-bezier(.16, 1, .3, 1);
+    /* Portada. Es el perfil, lo primero que se ve, y un resumen de cada sección. */
+
+    /* La firma va encima del nombre. Sus minúsculas quedan apoyadas sobre el nombre y
+       los trazos largos bajan cruzando el texto, que queda por delante. La monta el menú,
+       que además muestra la chica en la barra cuando esta sale de la vista. */
+    .perfil { padding: 128px 0 56px; }
+
+    .encabezado {
+      position: relative;
+      z-index: 2;
     }
 
-    @media (prefers-color-scheme: dark) {
-      :root {
-        --fondo: #0f0f0f;
-        --fondo-hover: #1c1c1c;
-        --trazo: #3b3b3b;
-        --foco: #6e6e6e;
-        --texto: #ededed;
-        --texto-suave: #b4b4b4;
-        --tarjeta: #161616;
-        --sombra-tarjeta: 0 0 0 1px #ffffff1a, 0 1px 2px -1px #00000080, 0 2px 4px 0 #0006;
-      }
+    .encabezado .nombre,
+    .encabezado .rol { position: relative; }
+
+    .firma {
+      position: absolute;
+      top: -2px;
+      left: clamp(-44px, -6%, -8px);
+      width: min(500px, calc(100% + 24px));
+      translate: 0 calc(var(--firma-base, .6) * -100%);
     }
 
-    *, *::before, *::after { box-sizing: border-box; }
-
-    html { -webkit-tap-highlight-color: transparent; }
-
-    a { color: inherit; }
-
-    body {
+    .nombre {
       margin: 0;
-      background: var(--fondo);
-      color: var(--texto);
-      font-family: var(--fuente-texto);
-      font-size: var(--letra-base);
-      line-height: 1.625;
-      font-feature-settings: "cv01";
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-
-    :focus-visible {
-      outline: 2px solid var(--foco);
-      outline-offset: 2px;
-      border-radius: 4px;
-    }
-
-    .columna {
-      max-width: 608px;
-      margin: 0 auto;
-      padding: 48px 24px;
-    }
-
-    @media (min-width: 640px) {
-      .columna { padding-block: 96px; }
-    }
-
-    .entrar {
-      animation: entrar .9s var(--curva-revelar) both;
-      animation-delay: calc(var(--paso, 0) * 120ms);
-    }
-
-    @keyframes entrar {
-      from {
-        opacity: 0;
-        transform: translate3d(0, 8px, 0);
-        filter: blur(4px);
-      }
-    }
-
-    .avatar {
-      display: grid;
-      place-items: center;
-      width: 22px;
-      height: 22px;
-      margin: 0 0 96px;
-      border-radius: 50%;
-      background: var(--texto);
-      color: var(--fondo);
-      font-size: 8.5px;
-      font-weight: 600;
-      letter-spacing: .02em;
-      line-height: 1;
-      user-select: none;
-    }
-
-    .titulo {
-      margin: 0 0 8px;
       font-family: var(--fuente-titulo);
       font-weight: 300;
       font-size: var(--letra-titulo);
@@ -117,93 +56,267 @@
       font-variation-settings: "SOFT" 60, "opsz" 30;
     }
 
-    .bajada {
-      margin: 0 0 48px;
+    .rol {
+      margin: 6px 0 0;
       color: var(--texto-suave);
-      text-wrap: balance;
     }
 
-    /* Cada sección del portafolio es un botón grande. Por ahora solo está Archivos. */
-    .secciones {
-      display: grid;
-      gap: 12px;
-      margin: 0;
+    .presentacion {
+      max-width: var(--ancho-texto);
+      margin-top: 40px;
+    }
+
+    .presentacion p {
+      margin: 0 0 16px;
+      color: var(--texto-suave);
+      text-wrap: pretty;
+    }
+
+    .presentacion .destacado {
+      color: var(--texto);
+      font-size: 18px;
+      line-height: 1.55;
+    }
+
+    .contacto {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px 24px;
+      margin: 32px 0 0;
       padding: 0;
       list-style: none;
     }
 
-    .seccion {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      min-height: 72px;
-      padding: 16px 20px;
+    /* Proyecto destacado */
+    .proyecto {
+      padding: 24px;
       border-radius: 14px;
       background: var(--tarjeta);
       box-shadow: var(--sombra-tarjeta);
-      text-decoration: none;
-      transition: background-color .2s ease-out, scale .2s ease-out;
     }
 
-    .seccion-texto { flex: 1; min-width: 0; }
+    .proyecto .fila-texto + .fila-texto { margin-top: 12px; }
 
-    .seccion-nombre {
-      display: block;
-      font-weight: 550;
-      line-height: 1.4;
-    }
-
-    .seccion-detalle {
-      display: block;
-      color: var(--texto-suave);
+    .datos {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 20px;
+      margin: 18px 0 0;
+      padding: 16px 0 0;
+      border-top: 1px solid var(--trazo);
+      color: var(--texto-tenue);
       font-size: var(--letra-chica);
-      line-height: 1.5;
-      text-wrap: pretty;
+      list-style: none;
     }
 
-    .seccion svg {
-      flex-shrink: 0;
-      width: 18px;
-      height: 18px;
-      color: var(--texto-suave);
-      transition: translate .3s var(--curva-revelar), color .2s ease-out;
+    /* Habilidades y formación, como una estantería (components/libros). Va a todo el ancho
+       de la ventana, porque los libros necesitan espacio a los lados, y con un alto fijo,
+       porque al abrir un libro su ficha ocupa todo el componente. */
+    body { overflow-x: clip; }
+
+    .bloque-estante {
+      padding-top: 40px;
+      border-top: 1px solid var(--trazo);
     }
 
-    @media (hover: hover) {
-      .seccion:hover { background: var(--fondo-hover); }
-      .seccion:hover svg { translate: 2px 0; color: var(--texto); }
+    /* Al saltar desde el menú, la estantería queda justo debajo de la barra y su niebla
+       (unos 150 px), y su alto deja que entre entera en la pantalla. */
+    #formacion { scroll-margin-top: 110px; }
+
+    .estanteria {
+      width: 100vw;
+      height: clamp(520px, calc(100svh - 170px), 720px);
+      margin-left: calc(50% - 50vw);
     }
 
-    .seccion:active { scale: .99; }
+    @media (max-width: 759px) {
+      .perfil { padding-top: 120px; }
+    }
 
-    @media (prefers-reduced-motion: reduce) {
-      .entrar { animation: none; }
-      .seccion, .seccion svg { transition: none; }
+    /* Pantallas bajas: menos aire arriba, para que el perfil entero (firma, presentación y
+       enlaces) se vea al entrar sin tener que bajar */
+    @media (min-width: 760px) and (max-height: 680px) {
+      .perfil { padding-top: 96px; }
+      .presentacion { margin-top: 28px; }
+      .contacto { margin-top: 24px; }
     }
   </style>
 </head>
 <body>
-  <main class="columna">
-    <span class="avatar entrar" aria-hidden="true">EP</span>
+  <main class="pagina" id="inicio">
+    <header class="perfil sangria">
+      <div class="encabezado entrar">
+        <div class="firma" aria-hidden="true"></div>
+        <h1 class="nombre">Enzo Pavez</h1>
+        <p class="rol">Product Developer</p>
+      </div>
 
-    <header class="entrar" style="--paso:1">
-      <h1 class="titulo">Enzo Pavez</h1>
-      <p class="bajada">Este portafolio se arma de a poco. Por ahora puedes leer mis archivos.</p>
+      <div class="presentacion entrar" style="--paso:1">
+        <p class="destacado">Diseño, construyo y entrego productos digitales. Mi perfil es híbrido entre producto y datos, y en más de cinco años he llevado productos de principio a fin para clientes públicos y privados.</p>
+        <p>Hago de voz del usuario dentro del equipo. Entiendo el problema que tengo delante, lo traduzco en algo que se pueda construir y lo acompaño hasta producción junto a product managers, product designers, ingeniería y negocio. Diseño y mantengo los sistemas de diseño que dan consistencia a lo que entregamos, y construyo producto propio de la interfaz al despliegue.</p>
+      </div>
+
+      <ul class="contacto entrar" style="--paso:2">
+        <li><a class="enlace" href="mailto:enzopavez1996@gmail.com">Escríbeme</a></li>
+        <li><a class="enlace" href="https://www.linkedin.com/in/enzopavez" target="_blank" rel="noopener">LinkedIn<svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 16 16.5 7.5M9.5 7.5h7v7"/></svg></a></li>
+        <li><a class="enlace" href="https://github.com/EnzoPavez" target="_blank" rel="noopener">GitHub<svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 16 16.5 7.5M9.5 7.5h7v7"/></svg></a></li>
+      </ul>
     </header>
 
-    <nav aria-label="Secciones">
-      <ul class="secciones">
-        <li class="entrar" style="--paso:2">
-          <a class="seccion" href="components/archivos/">
-            <span class="seccion-texto">
-              <span class="seccion-nombre">Archivos</span>
-              <span class="seccion-detalle">Artículos sobre Delta Lake, Databricks y Fabric</span>
-            </span>
-            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13.5"/><path d="m13 6.5 5.5 5.5-5.5 5.5"/></svg>
-          </a>
-        </li>
-      </ul>
-    </nav>
+    <section class="bloque" aria-labelledby="experiencia">
+      <h2 class="bloque-nombre" id="experiencia">Experiencia</h2>
+      <div class="bloque-contenido">
+        <ol class="filas">
+          <li>
+            <div class="fila-cabeza">
+              <h3 class="fila-titulo">Product Developer <span class="fila-lugar">en Datua</span></h3>
+              <span class="fila-dato">Enero 2024 a hoy</span>
+            </div>
+            <p class="fila-texto">Lidero el discovery de cada iniciativa de principio a fin, desde enmarcar el problema con las áreas usuarias hasta validar la hipótesis, y lo acompaño con ingeniería hasta producción. Diseño y mantengo los sistemas de diseño de los equipos, defino con los usuarios las métricas con que deciden y priorizo el backlog con hasta seis clientes en paralelo.</p>
+          </li>
+          <li>
+            <div class="fila-cabeza">
+              <h3 class="fila-titulo">Analista BI y Data Analytics <span class="fila-lugar">en Inteligencia Analítica</span></h3>
+              <span class="fila-dato">Junio 2023 a febrero 2024</span>
+            </div>
+            <p class="fila-texto">Trabajé con ingeniería en la migración de un entorno heredado que llegaba sin documentación. Reconstruí con ingeniería inversa la lógica de negocio que nadie tenía escrita, y definí y certifiqué los indicadores con que el negocio hacía su seguimiento mensual.</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <section class="bloque" aria-labelledby="proyectos">
+      <h2 class="bloque-nombre" id="proyectos">Proyectos</h2>
+      <div class="bloque-contenido">
+        <article class="proyecto">
+          <div class="fila-cabeza">
+            <h3 class="fila-titulo">Machete <span class="fila-lugar">producto propio</span></h3>
+            <a class="enlace" href="https://machetedev.com" target="_blank" rel="noopener">machetedev.com<svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 16 16.5 7.5M9.5 7.5h7v7"/></svg></a>
+          </div>
+          <p class="fila-texto">Una plataforma web gratuita para preparar certificaciones de Microsoft, que llevé de principio a fin yo solo. Quien prepara una certificación no tiene dónde practicar de forma realista sin pagar simulacros, y llega al examen a ciegas.</p>
+          <p class="fila-texto">Tiene un modo examen para medirse en condiciones reales y un modo estudio para entender cada respuesta, sobre un sistema de componentes y tokens propio.</p>
+          <ul class="datos">
+            <li>En producción desde octubre 2025</li>
+            <li>Next.js, React y PostgreSQL sobre Supabase</li>
+            <li>Más de 50 personas registradas en su primer año</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
+    <section class="bloque" aria-labelledby="componentes">
+      <h2 class="bloque-nombre" id="componentes">Componentes</h2>
+      <div class="bloque-contenido">
+        <ul class="filas">
+          <li>
+            <a class="fila-enlace" href="components/libros/">
+              <span class="fila-titulo">Estantería de libros<svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13.5M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+              <span class="fila-texto" style="display:block">Los libros de lomo. El elegido gira, muestra su tapa y se abre en su ficha.</span>
+            </a>
+          </li>
+          <li>
+            <a class="fila-enlace" href="components/bolas-de-papel/">
+              <span class="fila-titulo">Bolas de papel<svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13.5M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+              <span class="fila-texto" style="display:block">Ideas arrugadas que se abren al pasar el mouse.</span>
+            </a>
+          </li>
+          <li>
+            <a class="fila-enlace" href="components/san-rafael-diorama-v9/">
+              <span class="fila-titulo">Diorama de San Rafael<svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13.5M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+              <span class="fila-texto" style="display:block">San Rafael, Mendoza, en miniatura y en 3D.</span>
+            </a>
+          </li>
+          <li>
+            <a class="fila-enlace" href="components/firma/">
+              <span class="fila-titulo">Firma<svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h13.5M13 6.5l5.5 5.5-5.5 5.5"/></svg></span>
+              <span class="fila-texto" style="display:block">La de arriba, que se firma sola al entrar.</span>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="bloque" aria-labelledby="publicaciones">
+      <h2 class="bloque-nombre" id="publicaciones">Publicaciones</h2>
+      <div class="bloque-contenido">
+        <div id="publicaciones-lista"></div>
+      </div>
+    </section>
+
+    <section class="bloque-estante" id="formacion" aria-label="Habilidades y formación">
+      <div class="estanteria" id="estanteria"></div>
+    </section>
+
+    <footer class="pie">
+      <span>Enzo Pavez</span>
+      <span>Este portafolio se arma de a poco.</span>
+    </footer>
   </main>
+
+  <script type="module">
+    import { montarMenu } from './components/menu/menu.js';
+    import { montarResumen } from './components/archivos/resumen.js';
+    import { montarLibreria } from './components/libros/libros.js';
+
+    // La barra con el menú y las dos firmas: la grande sobre el nombre (espera a que el
+    // encabezado termine de entrar) y la chica de la barra, que aparece al bajar.
+    montarMenu({
+      origen: document.querySelector('.firma'),
+      inicio: '#inicio',
+      correo: 'enzopavez1996@gmail.com',
+      retraso: 650,
+      enlaces: [
+        { texto: 'Experiencia', href: '#experiencia' },
+        { texto: 'Proyectos', href: '#proyectos' },
+        { texto: 'Componentes', href: '#componentes' },
+        { texto: 'Publicaciones', href: '#publicaciones' },
+        { texto: 'Formación', href: '#formacion' },
+      ],
+    });
+
+    // Las publicaciones salen de components/archivos, así se actualizan solas. Cuatro por
+    // tema; si un tema tiene más, se despliegan ahí mismo con su botón.
+    const publicaciones = document.getElementById('publicaciones-lista');
+    const resumenListo = montarResumen(publicaciones, { porTema: 4 }).catch(() => {
+      publicaciones.innerHTML = '<p class="fila-texto">No se pudieron cargar las publicaciones.</p>';
+    });
+
+    // Habilidades, estudios y certificaciones como libros de una estantería. Los datos están
+    // en datos/formacion.json, que sale del CV; ahí se pueden sumar descripciones o enlaces.
+    const estanteriaLista = montarLibreria(document.getElementById('estanteria'), {
+      lista: 'datos/formacion.json',
+      titulo: 'Habilidades y formación',
+      bajada: 'Elige un libro y ábrelo',
+      indice: 'Grupos',
+      inicial: 'ingenieria-industrial',
+      resumen: ['6 habilidades', '3 estudios', '5 certificaciones'],
+      // Al abrir un libro, la estantería se acomoda por debajo de la barra y su niebla
+      margenArriba: 150,
+    });
+
+    // Al entrar con #seccion en la dirección (por ejemplo desde el menú de otra página), el
+    // navegador salta antes de que carguen las publicaciones, que después empujan todo hacia
+    // abajo. Cuando ya cargó todo se vuelve a saltar, salvo que la persona ya haya movido la página.
+    const destino = decodeURIComponent(location.hash.slice(1));
+    if (destino) {
+      let seMovio = false;
+      const marcar = () => { seMovio = true; };
+      const eventos = ['wheel', 'touchmove', 'keydown', 'pointerdown'];
+      for (const e of eventos) addEventListener(e, marcar, { passive: true });
+      // Como mucho 4 segundos, por si algo no termina de cargar
+      await Promise.race([
+        Promise.allSettled([resumenListo, estanteriaLista, document.fonts?.ready]),
+        new Promise((r) => setTimeout(r, 4000)),
+      ]);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+      for (const e of eventos) removeEventListener(e, marcar);
+      if (!seMovio && decodeURIComponent(location.hash.slice(1)) === destino) {
+        document.getElementById(destino)?.scrollIntoView({ behavior: 'instant', block: 'start' });
+      }
+    }
+    // Desde ahora los saltos del menú son suaves (ver estilos/sitio.css)
+    document.documentElement.classList.add('suave');
+  </script>
 </body>
 </html>

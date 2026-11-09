@@ -253,7 +253,7 @@ function dibujarNota(papel, escala, limpio) {
   return { lienzo, ancho, alto, brillo: 0.05, ...colores(tono) };
 }
 
-// Timbre de goma: doble marco, letras mayúsculas y la tinta comida en partes.
+// Timbre de goma, con doble marco, letras mayúsculas y la tinta comida en partes.
 // Se dibuja en un canvas aparte para que los huecos no perforen el papel.
 function sellar(ctx, texto, cx, cy, azar) {
   const tam = 10;

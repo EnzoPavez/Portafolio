@@ -4,7 +4,7 @@
 // El movimiento está en archivos.css. Aquí solo se arma la lista y se sigue el scroll.
 
 // Un título pasa a ser la sección actual cuando su borde superior sube de esta línea (px)
-const LINEA_ACTIVA = 81;
+const LINEA_ACTIVA = 161; // justo debajo de donde quedan los títulos al saltar (--margen-salto)
 // Al final de la página la línea baja hasta esta distancia del borde inferior (px)
 const MARGEN_INFERIOR = 120;
 // A partir de la quinta fila todas se abren a la vez, para que una lista larga no tarde
@@ -34,6 +34,18 @@ export function crearIndice(titulos, { etiqueta = "Índice" } = {}) {
   });
 
   nav.append(lista);
+
+  // Cuántas líneas ocupa cada título (1 o 2), para que la fila abierta tenga el alto justo.
+  // Se mide al entrar en la página, al cargar la letra y cada vez que cambia el ancho.
+  const medirLineas = () => {
+    for (const fila of filas) {
+      const texto = fila.querySelector(".indice-texto");
+      const alto = parseFloat(getComputedStyle(texto).lineHeight) || 18;
+      fila.style.setProperty("--lineas", Math.min(2, Math.max(1, Math.round(texto.scrollHeight / alto))));
+    }
+  };
+  new ResizeObserver(medirLineas).observe(nav);
+  document.fonts?.ready.then(medirLineas);
 
   let actual = -1;
   // Fila elegida con un clic. Se respeta mientras dura el desplazamiento suave,

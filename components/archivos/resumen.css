@@ -1,0 +1,180 @@
+/* Resumen de publicaciones (resumen.js). Repite el aspecto de la lista de la portada de
+   Publicaciones con los tokens de la página que lo usa (estilos/sitio.css). */
+
+.pub-tema + .pub-tema { margin-top: 40px; }
+
+.pub-tema-titulo {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 10px;
+  color: var(--texto);
+  font-size: var(--letra-base);
+  font-weight: 550;
+  line-height: 1.6;
+}
+
+.pub-tema-cuenta {
+  color: var(--texto-tenue);
+  font-size: var(--letra-chica);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.pub-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pub-fila {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin: 0 -8px;
+  padding: 8px;
+  border-radius: 17px;
+  color: var(--texto);
+  text-decoration: none;
+  transition: background-color .15s ease-out;
+}
+
+.pub-fila:focus-visible { outline-offset: 0; border-radius: 17px; }
+
+@media (hover: hover) {
+  .pub-fila:hover { background: var(--fondo-hover); }
+  .pub-fila:hover .pub-imagen { scale: 1.06; }
+}
+
+.pub-fila:active { background: var(--fondo-hover); }
+
+/* La imagen del artículo en cuadrado, con el mismo marco que en Publicaciones */
+.pub-miniatura {
+  display: block;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  overflow: hidden;
+  border-radius: 9px;
+  background: var(--tarjeta);
+  box-shadow: var(--sombra-tarjeta);
+}
+
+.pub-imagen {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: scale .3s var(--curva-revelar);
+}
+
+/* Hasta dos líneas, así un título largo se lee entero */
+.pub-titulo {
+  display: -webkit-box;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-weight: 500;
+  line-height: 1.4;
+  text-wrap: pretty;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.pub-fecha {
+  flex-shrink: 0;
+  color: var(--texto-tenue);
+  font-size: var(--letra-chica);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* El resto del tema. Cerrado no ocupa lugar; al abrirse crece hasta su alto y las filas
+   entran una tras otra. */
+.pub-mas {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows .5s var(--curva-revelar);
+}
+
+.pub-mas-dentro {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* El hueco entre la última fila visible y la primera del resto, dentro de lo que crece */
+.pub-mas .pub-lista { padding-top: 8px; }
+
+.pub-mas .pub-fila {
+  opacity: 0;
+  filter: blur(4px);
+  translate: 0 -6px;
+  transition: opacity .2s ease, filter .3s var(--curva-revelar), translate .3s var(--curva-revelar), background-color .15s ease-out;
+}
+
+.pub-mas.pub-mas-abierto { grid-template-rows: 1fr; }
+
+.pub-mas.pub-mas-abierto .pub-fila {
+  opacity: 1;
+  filter: blur(0);
+  translate: 0 0;
+  transition: opacity .4s ease, filter .55s var(--curva-revelar), translate .55s var(--curva-revelar), background-color .15s ease-out;
+  transition-delay: calc(var(--i, 0) * 50ms), calc(var(--i, 0) * 50ms), calc(var(--i, 0) * 50ms), 0s;
+}
+
+/* Botón para ver el resto del tema */
+.pub-boton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--texto-suave);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color .2s ease-out;
+}
+
+/* Área de toque de 44 px */
+.pub-boton::before {
+  content: "";
+  position: absolute;
+  inset: -12px -10px;
+}
+
+.pub-boton svg {
+  width: 15px;
+  height: 15px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.75;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: rotate .35s var(--curva-revelar);
+}
+
+.pub-boton[aria-expanded="true"] svg { rotate: 180deg; }
+
+@media (hover: hover) {
+  .pub-boton:hover { color: var(--texto); }
+}
+
+.pub-vacio {
+  margin: 0;
+  color: var(--texto-suave);
+}
+
+@media (max-width: 520px) {
+  .pub-fila { gap: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pub-mas,
+  .pub-mas .pub-fila,
+  .pub-boton svg { transition: none !important; }
+}

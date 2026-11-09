@@ -3,8 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Archivos</title>
+  <title>Publicaciones · Enzo Pavez</title>
   <meta name="description" content="Artículos y documentos que guardo porque me interesan, ordenados por tema." />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Enzo Pavez" />
+  <meta property="og:locale" content="es_ES" />
+  <meta property="og:title" content="Publicaciones · Enzo Pavez" />
+  <meta property="og:description" content="Artículos sobre Delta Lake, Databricks y Fabric, ordenados por tema." />
+  <meta property="og:url" content="https://portafolio-lake-eight.vercel.app/components/archivos/" />
   <meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)" />
   <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)" />
   <link rel="icon" href="data:," />
@@ -12,6 +18,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..600,0..100&family=Geist+Mono:wght@400..500&family=Inter:opsz,wght@14..32,400..600&display=swap" />
   <link rel="stylesheet" href="./archivos.css" />
+  <script>
+    // El modo claro u oscuro elegido en la barra, antes de pintar, para que no parpadee
+    try { const t = localStorage.getItem('tema'); if (t === 'claro' || t === 'oscuro') document.documentElement.dataset.tema = t; } catch {}
+  </script>
   <script type="importmap">
     {
       "imports": {
@@ -30,6 +40,22 @@
   </main>
   <script>
     if (location.protocol === "file:") document.getElementById("sin-servidor").hidden = false;
+  </script>
+  <script type="module">
+    // La misma barra de la portada del sitio, con los mismos enlaces: todos llevan a su
+    // sección de la portada. Aquí la firma chica se escribe al cargar.
+    import { montarMenu } from '../menu/menu.js';
+    montarMenu({
+      inicio: '../../',
+      correo: 'enzopavez1996@gmail.com',
+      enlaces: [
+        { texto: 'Experiencia', href: '../../#experiencia' },
+        { texto: 'Proyectos', href: '../../#proyectos' },
+        { texto: 'Componentes', href: '../../#componentes' },
+        { texto: 'Publicaciones', href: '../../#publicaciones', actual: true },
+        { texto: 'Formación', href: '../../#formacion' },
+      ],
+    });
   </script>
 </body>
 </html>

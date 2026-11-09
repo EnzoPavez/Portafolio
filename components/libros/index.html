@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Libros</title>
+  <meta name="description" content="Muestra del componente de libros leídos, una estantería que se abre libro por libro." />
+  <meta name="theme-color" content="#fcfcfc" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#0f0f0f" media="(prefers-color-scheme: dark)" />
+  <link rel="icon" href="data:," />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..600,0..100&family=Inter:opsz,wght@14..32,400..600&display=swap" />
+  <link rel="stylesheet" href="./libros.css" data-libreria />
+  <style>
+    /* Muestra de la estantería a pantalla completa, con los tokens de la portada. */
+    :root {
+      color-scheme: light dark;
+      --fondo: #fcfcfc;
+      --fondo-hover: #f6f6f6;
+      --trazo: #d9d9d9;
+      --foco: #8d8d8d;
+      --texto: #202020;
+      --texto-suave: #646464;
+      --tarjeta: #ffffff;
+      --letra-chica: 13px;
+      --letra-base: 16px;
+      --fuente-texto: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      --fuente-titulo: "Fraunces", Georgia, "Times New Roman", serif;
+      --curva-revelar: cubic-bezier(.16, 1, .3, 1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --fondo: #0f0f0f;
+        --fondo-hover: #1c1c1c;
+        --trazo: #3b3b3b;
+        --foco: #6e6e6e;
+        --texto: #ededed;
+        --texto-suave: #b4b4b4;
+        --tarjeta: #161616;
+      }
+    }
+
+    html { -webkit-tap-highlight-color: transparent; }
+
+    body {
+      margin: 0;
+      background: var(--fondo);
+      color: var(--texto);
+      font-family: var(--fuente-texto);
+      font-feature-settings: "cv01";
+    }
+
+    #libros { height: 100svh; }
+  </style>
+</head>
+<body>
+  <main id="libros"></main>
+
+  <script type="module">
+    import { montarLibreria } from './libros.js';
+    montarLibreria(document.getElementById('libros'), {
+      volver: { texto: 'Volver', href: '../../' },
+    });
+  </script>
+</body>
+</html>

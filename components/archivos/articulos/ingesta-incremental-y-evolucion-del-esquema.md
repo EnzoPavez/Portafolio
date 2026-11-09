@@ -3,16 +3,17 @@ titulo: Ingesta incremental y evolución del esquema
 bajada: Cómo cargar solo los archivos nuevos de una carpeta y aceptar los campos que la fuente va sumando sin que la carga se rompa.
 tema: Ingesta y streaming
 fecha: 2026-10-07
+imagen: imagenes/ingesta-incremental-y-evolucion-del-esquema.jpg
 ---
 
 ## El problema
 
-Una fuente envía archivos JSON a una carpeta de forma continua. Hay que cargarlos en una tabla Delta cumpliendo dos cosas:
+Una fuente envía archivos JSON a una carpeta de forma continua y hay que cargarlos en una tabla Delta. La carga tiene que cumplir dos cosas.
 
-- **Ingesta incremental:** procesar solo los archivos nuevos en cada ejecución, sin releer los anteriores ni duplicar datos, aunque haya millones.
-- **Esquema cambiante (schema drift):** la fuente añade campos con el tiempo (por ejemplo, un sensor nuevo que envía "humedad") y la carga no debe romperse ni perder esos datos.
+- **Ingesta incremental.** Procesar solo los archivos nuevos en cada ejecución, sin releer los anteriores ni duplicar datos, aunque haya millones.
+- **Esquema cambiante (schema drift).** La fuente añade campos con el tiempo (por ejemplo, un sensor nuevo que envía "humedad") y la carga no debe romperse ni perder esos datos.
 
-**Lo que pasa sin preparar nada:**
+Si no preparas nada, pasa esto.
 
 | Situación | Resultado |
 | --- | --- |
@@ -20,16 +21,16 @@ Una fuente envía archivos JSON a una carpeta de forma continua. Hay que cargarl
 | Llega un campo nuevo y la tabla tiene esquema fijo | El campo se ignora y se pierde, o la escritura falla por esquema incompatible |
 | Un campo cambia de tipo (número que llega como texto) | Valores nulos o errores al escribir |
 
-**Las dos piezas que lo resuelven:**
+Para resolverlo hacen falta dos piezas.
 
-- **Para la ingesta incremental:** algo que recuerde qué archivos se procesaron. En Databricks, Auto Loader; en Fabric, Structured Streaming con checkpoint.
-- **Para el esquema cambiante:** la evolución del esquema de Delta, que permite añadir columnas a la tabla al escribir, y un sitio donde guardar lo que no encaje.
+- **Para la ingesta incremental**, algo que recuerde qué archivos se procesaron. En Databricks es Auto Loader y en Fabric, Structured Streaming con checkpoint.
+- **Para el esquema cambiante**, la evolución del esquema de Delta, que permite añadir columnas a la tabla al escribir, y un sitio donde guardar lo que no encaje.
 
 ## Evolución del esquema en Delta
 
-Por defecto, Delta aplica **schema enforcement**: si intentas escribir datos con columnas que la tabla no tiene, la escritura falla. Es una protección para no meter basura sin querer. La evolución del esquema es permitir, de forma explícita, que la tabla cambie.
+Por defecto, Delta aplica **schema enforcement**. Si intentas escribir datos con columnas que la tabla no tiene, la escritura falla. Es una protección para no meter basura sin querer. La evolución del esquema consiste en permitir, de forma explícita, que la tabla cambie.
 
-**Qué cambios son compatibles:**
+Estos son los cambios que admite y cómo se hace cada uno.
 
 | Cambio | ¿Se puede evolucionar? | Cómo |
 | --- | --- | --- |
@@ -38,14 +39,14 @@ Por defecto, Delta aplica **schema enforcement**: si intentas escribir datos con
 | Renombrar o borrar columnas | Sí, sin reescribir | Column mapping |
 | Cambiar a un tipo incompatible (texto a número) | No | Reescribir la tabla con overwriteSchema |
 
-**Añadir columnas al escribir:**
+**Añadir columnas al escribir.** Con la opción mergeSchema, las columnas que traiga el DataFrame y que la tabla no tenga se añaden a la tabla.
 
 ```python
 # Si df trae columnas que la tabla no tiene, se añaden
 df.write.format("delta").mode("append").option("mergeSchema", "true").saveAsTable("eventos")
 ```
 
-**En MERGE:** mergeSchema no aplica; se usa una configuración o la cláusula específica.
+**Añadir columnas en un MERGE.** Aquí mergeSchema no aplica. Se usa una configuración de la sesión o, en Databricks, la cláusula específica.
 
 ```python
 # Permite que un MERGE añada columnas nuevas del origen
@@ -60,24 +61,24 @@ WHEN MATCHED THEN UPDATE SET *
 WHEN NOT MATCHED THEN INSERT *;
 ```
 
-**Ampliar tipos sin reescribir (type widening):**
+**Ampliar tipos sin reescribir.** Con type widening puedes pasar una columna a un tipo más amplio sin reescribir la tabla.
 
 ```sql
 ALTER TABLE eventos SET TBLPROPERTIES ('delta.enableTypeWidening' = true);
 ALTER TABLE eventos ALTER COLUMN contador TYPE BIGINT;
 ```
 
-**Reescribir el esquema por completo** (cambios incompatibles; reescribe toda la tabla):
+**Reescribir el esquema por completo.** Para los cambios incompatibles queda overwriteSchema, que reescribe toda la tabla.
 
 ```python
 df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable("eventos")
 ```
 
-Type widening y column mapping suben la versión de protocolo de la tabla; conviene comprobar que todos los lectores la soportan antes de activarlos.
+Type widening y column mapping suben la versión de protocolo de la tabla, así que conviene comprobar que todos los lectores la soportan antes de activarlos.
 
-## Databricks: Auto Loader con evolución del esquema
+## Auto Loader en Databricks
 
-En Databricks, Auto Loader resuelve las dos piezas a la vez (el detalle está en el documento de Auto Loader):
+En Databricks, Auto Loader resuelve las dos piezas a la vez. El detalle está en el [artículo de Auto Loader](auto-loader-en-databricks.md), y este es el ejemplo aplicado al caso de los JSON.
 
 ```python
 df = (spark.readStream
@@ -94,20 +95,20 @@ df = (spark.readStream
    .toTable("main.iot.eventos_bronze"))
 ```
 
-- **Incremental:** el checkpoint recuerda qué archivos se procesaron.
-- **Esquema:** infiere el esquema, lo guarda en schemaLocation y, al detectar columnas nuevas, se detiene, las añade y continúa al reiniciarse (con reintentos en el job es automático).
-- **Lo que no encaja:** va a la columna \_rescued\_data, sin perder nada.
+- **Ingesta incremental.** El checkpoint recuerda qué archivos se procesaron.
+- **Esquema.** Auto Loader infiere el esquema y lo guarda en schemaLocation. Al detectar columnas nuevas se detiene, las añade y continúa al reiniciarse (si el job tiene reintentos, esto es automático).
+- **Lo que no encaja.** Va a la columna \_rescued\_data, sin perder nada.
 
-Esto es lo que Fabric no trae de serie. Los apartados siguientes muestran cómo conseguir lo mismo.
+Fabric no trae esto de serie. Las secciones siguientes muestran cómo conseguir lo mismo.
 
-## Fabric: JSON crudo en bronze, esquema en silver
+## Fabric, bronze crudo y esquema en silver
 
-Es el patrón más robusto en Fabric: separar "traer los datos" de "interpretarlos".
+Es el patrón más robusto en Fabric. Consiste en separar "traer los datos" de "interpretarlos".
 
-- **Bronze:** guarda cada registro JSON tal cual, como texto, junto con el archivo de origen y la fecha de carga. Nunca falla por el esquema, porque no lo interpreta.
-- **Silver:** convierte el texto en columnas, deja que la tabla añada las columnas nuevas y aparta lo que no se puede leer.
+- **Bronze.** Guarda cada registro JSON tal cual, como texto, junto con el archivo de origen y la fecha de carga. Nunca falla por el esquema, porque no lo interpreta.
+- **Silver.** Convierte el texto en columnas, deja que la tabla añada las columnas nuevas y aparta lo que no se puede leer.
 
-**Paso 1: bronze incremental con streaming y checkpoint**
+**Paso 1. Bronze incremental con streaming y checkpoint**
 
 ```python
 from pyspark.sql import functions as F
@@ -127,9 +128,9 @@ crudo = (spark.readStream
    .toTable("eventos_bronze"))
 ```
 
-El checkpoint garantiza que cada archivo se lee una sola vez, igual que Auto Loader. Si los JSON vienen en varias líneas por registro (no uno por línea), usa format("json") con la opción multiLine y un esquema de una sola columna de texto, o pide a la fuente formato JSON Lines.
+El checkpoint garantiza que cada archivo se lee una sola vez, igual que con Auto Loader. Si los JSON vienen en varias líneas por registro (no uno por línea), usa format("json") con la opción multiLine y un esquema de una sola columna de texto, o pide a la fuente formato JSON Lines.
 
-**Paso 2: silver con el esquema inferido en cada lote**
+**Paso 2. Silver con el esquema inferido en cada lote**
 
 ```python
 def cargar_silver(lote, batch_id):
@@ -153,7 +154,7 @@ def cargar_silver(lote, batch_id):
    .start())
 ```
 
-**Qué consigues:**
+Con los dos pasos, cada necesidad queda cubierta.
 
 | Necesidad | Cómo se resuelve |
 | --- | --- |
@@ -162,11 +163,11 @@ def cargar_silver(lote, batch_id):
 | Registros ilegibles | Tabla de cuarentena, sin parar la carga |
 | Reprocesar si cambias la lógica | El JSON original sigue en bronze |
 
-Un matiz: si un campo cambia de tipo entre lotes (por ejemplo, número en uno y texto en otro), mergeSchema fallará. Para esos campos conviene fijar el tipo con un esquema parcial o convertirlos explícitamente antes de escribir.
+Hay un matiz. Si un campo cambia de tipo entre lotes (por ejemplo, número en uno y texto en otro), mergeSchema fallará. Para esos campos conviene fijar el tipo con un esquema parcial o convertirlos explícitamente antes de escribir.
 
-## Fabric: alternativa directa y detección de cambios
+## Fabric, alternativas más simples
 
-**Alternativa más simple: streaming de JSON con esquema.** Si el esquema cambia poco, se puede leer el JSON directamente. Structured Streaming exige un esquema para leer archivos; hay dos formas de dárselo:
+**Streaming directo del JSON.** Si el esquema cambia poco, puedes leer el JSON directamente, sin la capa de texto crudo. Structured Streaming exige un esquema para leer archivos y hay dos formas de dárselo.
 
 ```python
 # Opción A: esquema explícito (los campos que no estén en él se ignoran)
@@ -177,9 +178,25 @@ spark.conf.set("spark.sql.streaming.schemaInference", "true")
 eventos = spark.readStream.json("Files/landing/eventos/")
 ```
 
-En la opción B, el esquema se fija al iniciar: los campos que aparezcan después solo se recogen en la siguiente ejecución. Con trigger availableNow en un job programado, cada ejecución vuelve a inferir, así que en la práctica se adapta, aunque con un desfase de una ejecución. Es menos robusto que el patrón bronze/silver, pero más rápido de montar.
+Con el esquema explícito, los campos que no estén en él se ignoran. Con la inferencia, el esquema se fija al iniciar la consulta, de modo que los campos que aparezcan después solo se recogen en la siguiente ejecución. Con trigger availableNow en un job programado, cada ejecución vuelve a inferir, así que en la práctica se adapta, aunque con un desfase de una ejecución.
 
-**Detectar y registrar columnas nuevas.** Aunque la carga las absorba sola, conviene saber cuándo cambia el esquema para revisar si afecta a capas posteriores o a informes.
+Frente al patrón de bronze crudo, es más rápido de montar pero menos robusto. La diferencia queda así.
+
+| Aspecto | Bronze crudo y silver | Streaming directo |
+| --- | --- | --- |
+| Montaje | Dos flujos, cada uno con su checkpoint | Un solo flujo, más rápido de montar |
+| Campos nuevos | Se infieren en cada lote de silver | Se ignoran con esquema explícito, o llegan en la siguiente ejecución con inferencia al arrancar |
+| Registros ilegibles | Van a una tabla de cuarentena | El ejemplo no los aparta |
+| Conviene si | El esquema cambia a menudo o necesitas reprocesar | El esquema cambia poco |
+
+**Sin código.** Fabric también tiene caminos que no pasan por un notebook.
+
+- **Pipelines de Data Factory.** La actividad de copia hacia una tabla del lakehouse puede mapear columnas automáticamente, y filtrar por fecha de modificación para hacer cargas incrementales.
+- **Eventstream.** Sirve si los eventos llegan desde Event Hubs u otra fuente en tiempo real, en lugar de archivos.
+
+## Detectar columnas nuevas en Fabric
+
+Aunque la carga absorba sola las columnas nuevas, conviene saber cuándo cambia el esquema para revisar si afecta a capas posteriores o a informes. Este ejemplo compara el esquema de los últimos JSON con el de la tabla silver.
 
 ```python
 # Compara el esquema de los últimos JSON con el de la tabla silver
@@ -194,23 +211,25 @@ if columnas_nuevas:
 
 En un caso real conviene limitar la lectura a los archivos recientes (por ejemplo, una subcarpeta por fecha) para no inferir sobre todo el histórico.
 
-**Otras opciones sin código en Fabric:**
+## Buenas prácticas
 
-- **Pipelines de Data Factory:** la actividad de copia hacia una tabla del lakehouse puede mapear columnas automáticamente, y filtrar por fecha de modificación para hacer cargas incrementales.
-- **Eventstream:** si los eventos llegan desde Event Hubs u otra fuente en tiempo real, en lugar de archivos.
+- **Evolución en bronze y silver, control en gold.** Las capas de entrada absorben los cambios. La capa gold, que alimenta informes, debe tener un esquema estable y cambiar solo de forma deliberada.
+- **Guardar siempre el dato original.** En bronze, como texto o como columna de rescate, para poder reprocesar.
+- **Fijar el tipo de los campos críticos.** Importes, fechas y claves con tipo explícito, y dejar que el resto se infiera.
+- **Registrar los cambios de esquema.** Saber cuándo apareció una columna ahorra mucho tiempo al investigar problemas.
+- **No borrar el checkpoint al cambiar la lógica de silver**, salvo que quieras reprocesar todo. En ese caso, vacía también la tabla destino.
+- **Revisar la cuarentena** con regularidad. Si crece, la fuente está enviando algo que no se está interpretando bien.
 
-## Buenas prácticas y comparativa
+## Errores comunes
 
-**Buenas prácticas:**
+- **Usar mergeSchema en un MERGE.** Ahí no aplica. Para que un MERGE añada columnas hace falta autoMerge o, en Databricks, MERGE WITH SCHEMA EVOLUTION.
+- **Dar un esquema explícito al streaming y esperar campos nuevos.** Los campos que no estén en el esquema se ignoran sin avisar.
+- **Contar con mergeSchema para un cambio de tipo.** mergeSchema añade columnas, pero si un campo llega como número en un lote y como texto en otro, la escritura falla. Fija el tipo o conviértelo antes de escribir. Si el cambio en la tabla es incompatible, hace falta overwriteSchema, que la reescribe entera.
+- **Activar type widening o column mapping sin revisar los lectores.** Los dos suben la versión de protocolo de la tabla, y antes de activarlos hay que comprobar que todos los que leen la tabla la soportan.
 
-- **Evolución en bronze y silver, control en gold:** las capas de entrada absorben los cambios; la capa gold, que alimenta informes, debe tener un esquema estable y cambiar solo de forma deliberada.
-- **Guardar siempre el dato original:** en bronze, como texto o como columna de rescate, para poder reprocesar.
-- **Fijar el tipo de los campos críticos:** importes, fechas y claves con tipo explícito, y dejar inferir el resto.
-- **Registrar los cambios de esquema:** saber cuándo apareció una columna ahorra mucho tiempo al investigar problemas.
-- **No borrar el checkpoint al cambiar la lógica de silver** salvo que quieras reprocesar todo; en ese caso, vacía también la tabla destino.
-- **Revisar la cuarentena** con regularidad; si crece, la fuente está enviando algo que no se está interpretando bien.
+## Databricks frente a Fabric
 
-**Comparativa:**
+Las dos plataformas cubren las mismas necesidades con piezas distintas.
 
 | Necesidad | Databricks | Fabric |
 | --- | --- | --- |
@@ -222,4 +241,4 @@ En un caso real conviene limitar la lectura a los archivos recientes (por ejempl
 | Columnas nuevas en MERGE | MERGE WITH SCHEMA EVOLUTION o autoMerge | autoMerge |
 | Ampliar tipos o renombrar columnas | Type widening y column mapping | Igual, según versión de runtime |
 
-En resumen: en Databricks, Auto Loader da todo hecho; en Fabric se consigue lo mismo combinando checkpoint, bronze crudo y mergeSchema, con algo más de código pero el mismo resultado.
+En resumen, en Databricks Auto Loader da todo hecho. En Fabric se consigue lo mismo combinando checkpoint, bronze crudo y mergeSchema, con algo más de código pero el mismo resultado.

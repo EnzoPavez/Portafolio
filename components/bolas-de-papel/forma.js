@@ -129,7 +129,7 @@ export function crearForma({ ancho, alto, radio, semilla, paso = 2.7, pliegues =
       px += deriva[i * 2] * amp.deriva * medio;
       py += deriva[i * 2 + 1] * amp.deriva * medio;
 
-      // Curvatura que se va a cero: la esfera se abre como un paraguas.
+      // Curvatura que se va a cero, así la esfera se abre como un paraguas.
       const k = curvaturaBola * bola * bola;
       const s = Math.hypot(px, py) || 1e-6;
       const ux = px / s;

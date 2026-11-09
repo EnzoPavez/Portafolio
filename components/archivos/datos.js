@@ -9,6 +9,20 @@ export const PERFIL = {
   inicio: "../../",
 };
 
+// Dirección pública del sitio. Los enlaces para compartir apuntan aquí cuando se abre la
+// página en el propio computador (localhost), porque esa dirección no sirve fuera de él.
+// Es la misma que SITIO en paginas-compartir.mjs.
+export const SITIO = "https://portafolio-lake-eight.vercel.app";
+
+const CARPETA_SECCION = new URL("./", import.meta.url).pathname;
+
+// Enlace para compartir un artículo. Lleva a su página de a/<nombre>/, que tiene el título,
+// la bajada y la imagen que leen LinkedIn y WhatsApp, y desde ahí pasa al artículo.
+export function enlaceParaCompartir(slug) {
+  const local = location.protocol === "file:" || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+  return `${local ? SITIO : location.origin}${CARPETA_SECCION}a/${slug}/`;
+}
+
 // Días que un archivo lleva la etiqueta "Nuevo" en la portada
 const DIAS_NUEVO = 30;
 
@@ -46,8 +60,21 @@ export async function cargarArchivo(slug) {
     fecha: leerFecha(datos.fecha),
     autor: datos.autor || "",
     fuente: datos.fuente || "",
+    ...leerImagen(datos.imagen),
+    minutos: Math.max(1, Math.round(cuerpo.split(/\s+/).filter(Boolean).length / 200)),
     cuerpo,
     secciones: extraerSecciones(cuerpo),
+  };
+}
+
+// La imagen de cabecera ("imagen: imagenes/nombre.jpg", relativa a articulos/). Al lado va
+// su versión chica, cuadrada de 112 px, para la lista: imagenes/nombre-chica.jpg.
+// Sin imagen, la lista dibuja la hoja de siempre y el artículo no muestra tarjeta.
+function leerImagen(ruta) {
+  if (!ruta || /^[a-z][a-z0-9+.-]*:/i.test(ruta)) return { imagen: "", miniatura: "" };
+  return {
+    imagen: new URL(ruta, CARPETA).href,
+    miniatura: new URL(ruta.replace(/(\.[a-z0-9]+)$/i, "-chica$1"), CARPETA).href,
   };
 }
 

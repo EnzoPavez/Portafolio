@@ -1,6 +1,6 @@
-// Portada de Archivos. Agrupa los archivos por tema y usa el mismo índice lateral para saltar entre temas.
+// Portada de Publicaciones (la carpeta sigue llamándose archivos). Agrupa los archivos por tema y usa el mismo índice lateral para saltar entre temas.
 
-import { PERFIL, aSlug, avatarHTML, cargarTodos, esNuevo, escapar, fechaCorta } from "./datos.js";
+import { aSlug, cargarTodos, esNuevo, escapar, fechaCorta } from "./datos.js";
 import { crearIndice } from "./indice-lateral.js";
 
 const principal = document.querySelector("main");
@@ -9,15 +9,11 @@ const principal = document.querySelector("main");
 const PASOS_MAX = 4;
 
 export async function mostrarPortada() {
-  const avatar = PERFIL.inicio
-    ? `<a class="avatar" href="${escapar(PERFIL.inicio)}" aria-label="Inicio">${avatarHTML()}</a>`
-    : `<span class="avatar">${avatarHTML()}</span>`;
-
+  // La navegación (firma, menú y vuelta al inicio) la pone la barra de arriba, en index.html
   principal.innerHTML = `
-    ${avatar}
     <header class="entrar" style="--paso:0">
-      <h1 class="titulo">Archivos</h1>
-      <p class="bajada">Artículos y documentos que guardo porque me interesan, ordenados por tema.</p>
+      <h1 class="titulo">Publicaciones</h1>
+      <p class="bajada">Artículos y documentos que guardo, ordenados por tema.</p>
     </header>
     <div id="temas"></div>`;
 
@@ -79,7 +75,11 @@ function fila(archivo) {
   const fecha = fechaCorta(archivo.fecha);
   return `
     <a class="fila" href="?a=${archivo.slug}">
-      <span class="miniatura" aria-hidden="true"><span class="miniatura-hoja">${barras(archivo)}</span></span>
+      <span class="miniatura" aria-hidden="true">${
+        archivo.miniatura
+          ? `<img class="miniatura-imagen" src="${escapar(archivo.miniatura)}" alt="" width="44" height="44" loading="lazy" decoding="async" />`
+          : `<span class="miniatura-hoja">${barras(archivo)}</span>`
+      }</span>
       <span class="fila-cuerpo">
         <span class="fila-titulo">${escapar(archivo.titulo)}</span>
         ${esNuevo(archivo.fecha) ? '<span class="etiqueta-nuevo">Nuevo</span>' : ""}

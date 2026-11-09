@@ -1,7 +1,10 @@
-/* Archivos. Estilos compartidos por la portada y la vista de lectura. */
+/* Publicaciones (carpeta archivos). Estilos compartidos por la portada y la vista de lectura. */
 
+/* Modo claro por defecto. El oscuro se aplica si el sistema lo pide, salvo que la persona
+   haya elegido claro en la barra (data-tema="claro"), o si eligió oscuro (data-tema="oscuro").
+   Los dos bloques oscuros tienen que ser iguales. */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
 
   /* Grises base. El texto, los fondos y los bordes usan los tokens por función de más abajo.
      Los grises sueltos quedan solo para detalles de dibujo, como la miniatura. */
@@ -35,6 +38,7 @@
   --sombra-tarjeta: 0 0 0 1px #0000000f, 0 1px 2px -1px #0000000f, 0 2px 4px 0 #0000000a;
   --nuevo-fondo: #e7f0ff;
   --nuevo-texto: #1a5fd6;
+  --firma: #cf3b38;
 
   /* Tres tamaños. El chico para lo que acompaña, el base para leer y el del título. */
   --letra-chica: 13px;
@@ -53,10 +57,18 @@
   --revelar-desenfoque: 4px;
   --revelar-desplazamiento: -4px;
   --revelar-paso: 50ms;
+
+  /* Dónde queda un título al saltar a él: debajo de la barra (46 px) y su niebla (100 px) */
+  --margen-salto: 160px;
+}
+
+@media (max-width: 899px) {
+  :root { --margen-salto: 128px; }
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-tema="claro"]) {
+    color-scheme: dark;
     --gris-100: #0f0f0f;
     --gris-200: #1c1c1c;
     --gris-300: #232323;
@@ -75,7 +87,31 @@
     --sombra-tarjeta: 0 0 0 1px #ffffff1a, 0 1px 2px -1px #00000080, 0 2px 4px 0 #0006;
     --nuevo-fondo: #12233f;
     --nuevo-texto: #9ec2ff;
+    --firma: #ea5a51;
   }
+}
+
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+  --gris-100: #0f0f0f;
+  --gris-200: #1c1c1c;
+  --gris-300: #232323;
+  --gris-400: #2b2b2b;
+  --gris-500: #323232;
+  --gris-600: #3b3b3b;
+  --gris-700: #494949;
+  --gris-800: #5f5f5f;
+  --gris-900: #6e6e6e;
+  --gris-1000: #8f8f8f;
+  --gris-1100: #b4b4b4;
+  --gris-1200: #ededed;
+
+  --parrafo: #cfcfcf;
+  --tarjeta: #161616;
+  --sombra-tarjeta: 0 0 0 1px #ffffff1a, 0 1px 2px -1px #00000080, 0 2px 4px 0 #0006;
+  --nuevo-fondo: #12233f;
+  --nuevo-texto: #9ec2ff;
+  --firma: #ea5a51;
 }
 
 /* Base */
@@ -126,7 +162,8 @@ a { color: inherit; }
 .columna {
   max-width: 608px;
   margin: 0 auto;
-  padding: 48px 24px;
+  /* Arriba deja lugar para la barra fija (46 px) */
+  padding: 96px 24px 48px;
 }
 
 @media (min-width: 640px) {
@@ -148,77 +185,106 @@ a { color: inherit; }
   }
 }
 
-/* Avatar. Arriba a la izquierda, fijo en pantallas anchas. */
+/* Enlace de vuelta a la portada de Publicaciones, arriba del título del artículo. La firma, el
+   menú y la vuelta al inicio están en la barra de arriba (components/menu). */
 
-.avatar {
-  display: flex;
-  width: fit-content;
-  margin: -8px 0 88px -8px;
-  padding: 8px;
-  border-radius: 999px;
-  text-decoration: none;
-  user-select: none;
-}
+.volver-arriba { margin: 0 0 40px; }
 
-.avatar-imagen {
-  display: grid;
-  place-items: center;
-  width: 22px;
-  height: 22px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--texto);
-  color: var(--fondo);
-  /* Las iniciales son un dibujo, no texto de lectura, por eso quedan fuera de la escala */
-  font-size: 8.5px;
-  font-weight: 600;
-  letter-spacing: .02em;
-  line-height: 1;
-  transition: scale .2s ease-out;
-}
-
-@media (hover: hover) {
-  .avatar:hover .avatar-imagen { scale: 1.1; }
-}
-
-.avatar:active .avatar-imagen { scale: .97; }
-
-/* En la vista de lectura el avatar lleva al lado el enlace de vuelta a la portada */
-.avatar-con-volver {
-  align-items: center;
-  gap: 8px;
-  padding-right: 12px;
-}
-
-.avatar-volver {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  line-height: 1;
-  transition: color .2s ease-out;
-}
-
-.avatar-volver svg {
-  width: 16px;
-  height: 16px;
-  transition: translate .3s var(--curva-revelar);
-}
-
-@media (hover: hover) {
-  .avatar-con-volver:hover .avatar-volver { color: var(--texto); }
-  .avatar-con-volver:hover .avatar-volver svg { translate: -2px 0; }
-}
-
-.avatar-con-volver:active .avatar-volver { opacity: .7; }
-
+/* En pantallas anchas queda fijo a la izquierda, sobre el índice, así se puede volver
+   desde cualquier parte del artículo. Va por encima de la niebla de la barra. */
 @media (min-width: 1280px) {
-  .avatar {
+  .volver-arriba {
     position: fixed;
-    top: 88px;
-    left: 40px;
+    top: 104px;
+    left: 44px;
+    z-index: 25;
     margin: 0;
-    z-index: 10;
   }
+}
+
+/* Ficha del artículo. En pantallas angostas solo se ve la imagen, arriba del título. */
+
+.ficha { margin: 0 0 32px; }
+
+/* Un poco más alta que una foto apaisada, y con el recorte cargado hacia arriba, porque
+   varias imágenes son verticales y lo importante suele estar en la parte de arriba */
+.ficha-imagen {
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 2;
+  border-radius: 14px;
+  object-fit: cover;
+  object-position: 50% 25%;
+  background: var(--fondo-hover);
+}
+
+.ficha-texto { display: none; }
+
+/* En las anchas es una tarjeta fija a la derecha del texto, en el espacio que queda libre.
+   La columna mide 608 px y está centrada, así que su borde derecho está en 50% + 304 px. */
+@media (min-width: 1280px) {
+  .ficha {
+    position: fixed;
+    top: 112px;
+    left: calc(50% + 360px);
+    z-index: 10;
+    width: min(320px, calc(50% - 392px));
+    max-height: calc(100vh - 136px);
+    margin: 0;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--tarjeta);
+    box-shadow: var(--sombra-tarjeta);
+  }
+
+  .ficha-imagen {
+    aspect-ratio: 4 / 3;
+    border-radius: 0;
+  }
+
+  .ficha-texto {
+    display: block;
+    padding: 18px 20px 20px;
+  }
+
+  /* El título usa todo el ancho de la tarjeta; pretty solo evita una palabra sola al final */
+  .ficha-titulo {
+    margin: 0;
+    color: var(--texto);
+    font-size: 17px;
+    font-weight: 550;
+    line-height: 1.35;
+    text-wrap: pretty;
+  }
+
+  /* Fecha y lectura en una sola línea */
+  .ficha-datos {
+    margin: 6px 0 0;
+    overflow: hidden;
+    color: var(--texto-tenue);
+    font-size: var(--letra-chica);
+    line-height: 1.6;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .ficha-bajada {
+    display: -webkit-box;
+    margin: 12px 0 0;
+    overflow: hidden;
+    color: var(--texto-suave);
+    font-size: 14px;
+    line-height: 1.55;
+    text-wrap: pretty;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 4;
+  }
+}
+
+/* Pantallas bajas: la imagen se achica para que la tarjeta entre entera */
+@media (min-width: 1280px) and (max-height: 760px) {
+  .ficha-imagen { aspect-ratio: 16 / 9; }
+  .ficha-bajada { -webkit-line-clamp: 3; }
 }
 
 /* Cabecera de página */
@@ -273,13 +339,15 @@ a { color: inherit; }
 
 /* Índice lateral. Cerrado es una columna de rayas, abierto muestra los títulos. */
 
+/* El ancho usa el espacio libre entre el borde y el texto: la columna empieza en
+   50vw - 304 px y quedan 24 px de aire antes de ella. Va de 244 a 352 px. */
 .indice {
   position: fixed;
   top: 160px;
   left: 32px;
   z-index: 10;
   display: none;
-  width: 244px;
+  width: clamp(244px, calc(50vw - 360px), 352px);
   max-height: calc(100vh - 342px);
   overflow-y: auto;
   scrollbar-width: none;
@@ -335,15 +403,19 @@ a { color: inherit; }
   background: var(--texto);
 }
 
+/* Los títulos van enteros. Si no entran en una línea pasan a dos, y la fila abierta
+   crece según --lineas, que calcula indice-lateral.js midiendo cada título. */
 .indice-texto {
   position: absolute;
   left: 16px;
   right: 16px;
   top: 50%;
   overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  line-height: 1.5;
+  line-height: 18px;
+  text-wrap: balance;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  display: -webkit-box;
   opacity: 0;
   filter: blur(var(--revelar-desenfoque));
   translate: var(--revelar-desplazamiento) -50%;
@@ -352,12 +424,16 @@ a { color: inherit; }
 
 .indice-fila[aria-current] .indice-texto { color: var(--texto); }
 
+/* Un punto más chica que el resto del texto que acompaña, para que entren los títulos.
+   El selector doble le gana a la regla compartida de texto chico de más abajo. */
+.indice .indice-texto { font-size: 12px; }
+
 .indice:hover .indice-lista,
 .indice:has(:focus-visible) .indice-lista { gap: 4px; }
 
 .indice:hover .indice-fila,
 .indice:has(:focus-visible) .indice-fila {
-  height: 24px;
+  height: calc(var(--lineas, 1) * 18px + 6px);
   transition-delay: calc(var(--i, 0) * var(--revelar-paso)), 0s;
 }
 
@@ -579,7 +655,6 @@ a { color: inherit; }
 /* Texto chico y tenue. Lo comparte todo lo que acompaña al texto principal.
    Va después de las acciones para que el font: inherit de los botones no lo pise. */
 
-.avatar-volver,
 .meta,
 .indice-texto,
 .accion,
@@ -606,7 +681,7 @@ a { color: inherit; }
   font-weight: 550;
   line-height: 1.625;
   color: var(--texto);
-  scroll-margin-top: 80px;
+  scroll-margin-top: var(--margen-salto);
 }
 
 .tema-cuenta {
@@ -685,6 +760,35 @@ a { color: inherit; }
 
 @media (hover: hover) {
   .fila:hover .miniatura-hoja i { background: var(--gris-700); }
+}
+
+/* Con imagen, la miniatura es la imagen del artículo recortada en cuadrado, de 44 px,
+   porque una pintura más chica no se distingue. La hoja dibujada de los artículos sin
+   imagen crece lo mismo (38 + 2 × 3), así todas las filas quedan alineadas.
+   Al pasar el cursor la imagen se acerca un poco dentro del marco. */
+.miniatura-hoja {
+  width: 38px;
+  height: 38px;
+  padding: 7px;
+}
+
+.miniatura:has(.miniatura-imagen) {
+  padding: 0;
+  overflow: hidden;
+}
+
+.miniatura-imagen {
+  display: block;
+  width: 44px;
+  height: 44px;
+  border-radius: 9px;
+  object-fit: cover;
+  background: var(--fondo-hover);
+  transition: scale .3s var(--curva-revelar);
+}
+
+@media (hover: hover) {
+  .fila:hover .miniatura-imagen { scale: 1.06; }
 }
 
 .fila-cuerpo {
@@ -772,7 +876,7 @@ a { color: inherit; }
   font-size: var(--letra-base);
   font-weight: 550;
   line-height: 1.625;
-  scroll-margin-top: 80px;
+  scroll-margin-top: var(--margen-salto);
   text-wrap: balance;
 }
 
@@ -907,9 +1011,11 @@ a { color: inherit; }
   background: var(--borde);
 }
 
+/* Las tablas no se desplazan de lado. repartirColumnas (articulo.js) las hace entrar en la
+   columna, y si algo se escapara igual (una imagen en una celda) queda recortado, sin barra. */
 .prosa .tabla {
   margin: 32px 0;
-  overflow-x: auto;
+  overflow-x: clip;
 }
 
 .prosa table {
@@ -935,6 +1041,76 @@ a { color: inherit; }
 
 .prosa th { font-weight: 550; color: var(--texto); }
 
+/* Las etiquetas de fila tienen el mismo tamaño que el dato y menos contraste. */
+.prosa tbody th { font-weight: 400; color: var(--texto-suave); }
+
+/* Ninguna línea termina con una palabra sola. En las celdas, que son angostas, las líneas se
+   reparten parejas. El código y los enlaces largos de una celda (una ruta, un nombre de
+   propiedad) se cortan antes que empujar la tabla hacia afuera. */
+.prosa :is(p, li, dd, blockquote) { text-wrap: pretty; }
+.prosa :is(td, th) { text-wrap: balance; }
+.prosa :is(td, th) :is(code, a) { overflow-wrap: anywhere; }
+
+.prosa .tabla--partir :is(td, th) { overflow-wrap: anywhere; }
+
+/* Tabla que no entra cómoda con la letra del texto. Baja un paso en la escala (la letra
+   chica) y el resto sale de ese tamaño. Los mínimos de columna van en em (articulo.js) y el
+   interlineado sube un poco en proporción (1.65 contra 1.625 del texto), como pide la letra
+   más chica. Los rellenos se quedan en la escala de 4. */
+.prosa .tabla--compacta table {
+  font-size: var(--letra-chica);
+  line-height: 1.65;
+}
+
+/* Reparto del ancho por contenido (repartirColumnas en articulo.js). */
+.prosa table.midiendo { width: max-content; }
+.prosa table.midiendo-minimo { width: min-content; }
+.prosa table.midiendo :is(th, td),
+.prosa .sin-cortar { white-space: nowrap; }
+
+/* Las tablas que no entran bien en la columna (tres columnas o más en el teléfono, cinco o
+   más en escritorio) se apilan. Cada fila es una tarjeta, con el primer dato como título y
+   el resto con su encabezado encima. */
+.prosa .tabla--apilada :is(table, thead, tbody, tr, th, td) { display: block; }
+
+.prosa .tabla--apilada thead {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.prosa .tabla--apilada tr {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--borde);
+}
+
+.prosa .tabla--apilada tr:first-of-type { border-top: 1px solid var(--borde); }
+
+.prosa .tabla--apilada :is(td, th) {
+  padding: 0;
+  border: 0;
+}
+
+.prosa .tabla--apilada tr > :first-child {
+  margin-bottom: 8px;
+  font-weight: 550;
+  color: var(--texto);
+}
+
+.prosa .tabla--apilada tr > :not(:first-child) + * { margin-top: 8px; }
+
+.prosa .tabla--apilada tr > :not(:first-child)::before {
+  content: attr(data-columna);
+  display: block;
+  color: var(--texto-suave);
+  font-size: var(--letra-chica);
+  font-weight: 400;
+  line-height: 1.5;
+}
+
 /* Pantallas táctiles. Lo que se toca llega a 44px de alto aunque se vea igual. */
 
 @media (pointer: coarse) {
@@ -943,15 +1119,6 @@ a { color: inherit; }
 
   .compartir[data-abierto] .submenu-entrada,
   .compartir:has(:focus-visible) .submenu-entrada { height: 44px; }
-}
-
-/* El avatar crece hacia afuera, así ni la imagen ni el título se mueven.
-   En pantallas anchas va fijo y no hace falta. */
-@media (pointer: coarse) and (max-width: 1279px) {
-  .avatar {
-    margin: -11px 0 85px -11px;
-    padding: 11px;
-  }
 }
 
 /* Menos movimiento si el sistema lo pide */
@@ -965,8 +1132,6 @@ a { color: inherit; }
   .acciones *,
   .lista-resalte,
   .icono-cambio svg,
-  .avatar-imagen,
-  .avatar-volver svg,
   .volver svg,
   .fila {
     transition-duration: .01ms !important;

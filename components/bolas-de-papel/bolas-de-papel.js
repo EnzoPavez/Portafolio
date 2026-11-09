@@ -167,7 +167,7 @@ function sombraCalida(e, alto) {
     `rgba(${tono}, ${((0.26 - 0.08 * alto) * fuerza).toFixed(3)}))`;
 }
 
-// Como la sombra de las tarjetas de la página: un borde casi invisible y una caída corta hacia abajo.
+// Como la sombra de las tarjetas de la página, con un borde casi invisible y una caída corta hacia abajo.
 function sombraFina(e, alto) {
   const fuerza = oscuro.matches ? 3 : 1;
   return `drop-shadow(0 0 0.6px rgba(0, 0, 0, ${(0.16 * fuerza).toFixed(3)})) ` +
@@ -309,7 +309,7 @@ class Bola {
     despertar(this);
   }
 
-  // Resorte con amortiguación crítica: si se cambia de idea a mitad de camino,
+  // Resorte con amortiguación crítica. Si se cambia de idea a mitad de camino,
   // vuelve sin saltos. Abrir es un poco más lento que arrugar.
   paso(dt) {
     const w = this.objetivo > this.p ? 5.4 : 6.6;

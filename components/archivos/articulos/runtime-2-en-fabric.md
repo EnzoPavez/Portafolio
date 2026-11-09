@@ -1,11 +1,12 @@
 ---
-titulo: Runtime 2.0 en Fabric: guía práctica
+titulo: Guía práctica de Runtime 2.0 en Fabric
 bajada: Diez cambios de Runtime 2.0 (Spark 4.1 y Delta 4.2) para aprovechar en notebooks y SQL de Fabric, cada uno con sus pasos y código.
 tema: Rendimiento
 fecha: 2026-10-02
+imagen: imagenes/runtime-2-en-fabric.jpg
 ---
 
-Diez cambios para aprovechar Runtime 2.0 (Spark 4.1, Delta 4.2) en notebooks y SQL de Fabric, cada uno con sus pasos y código. Antes de migrar, conviene probar los notebooks en un environment aparte: el modo ANSI de Spark 4 hace fallar casts inválidos y divisiones por cero que antes devolvían NULL.
+Diez cambios para aprovechar Runtime 2.0 (Spark 4.1, Delta 4.2) en notebooks y SQL de Fabric, cada uno con sus pasos y código. Antes de migrar, conviene probar los notebooks en un environment aparte, porque el modo ANSI de Spark 4 hace fallar casts inválidos y divisiones por cero que antes devolvían NULL.
 
 ## Resumen
 
@@ -22,13 +23,15 @@ Diez cambios para aprovechar Runtime 2.0 (Spark 4.1, Delta 4.2) en notebooks y S
 | 9. Liquid Clustering | `CLUSTER BY` en lugar de particionado o Z-order | Menos ficheros leídos, mantenimiento barato | Tablas grandes, incluida gold |
 | 10. Python Data Source | Conectores propios para APIs | Ingestas en paralelo y reutilizables | Bronze desde APIs |
 
-## Punto 1: Native Execution Engine
+## 1. Native Execution Engine
 
 El motor nativo ejecuta las consultas de Spark en C++ vectorizado (Velox + Apache Gluten), sin cambios de código y sin coste adicional. Cuando una operación no está soportada, vuelve sola al Spark clásico (fallback). No acelera Structured Streaming ni la lectura de JSON y XML.
 
-### Paso 1: activarlo
+### Paso 1. Activarlo
 
-**Opción A: en el environment (recomendada para producción)**
+Se puede activar en el environment, que es lo recomendable para producción, o solo en un notebook concreto.
+
+**En el environment (recomendado para producción)**
 
 1. Abrir el item Environment (mejor uno nuevo solo para pruebas, para no afectar a otros notebooks).
 2. En Ejecución, seleccionar el runtime **2.0 (Spark 4.1, Delta 4.2)**.
@@ -36,7 +39,7 @@ El motor nativo ejecuta las consultas de Spark en C++ vectorizado (Velox + Apach
 4. Pulsar **Guardar** y después **Publicar**. Sin publicar no se aplica nada.
 5. En el notebook, seleccionar ese environment en el desplegable de entorno de la barra superior.
 
-**Opción B: solo en un notebook concreto** (primera celda del notebook)
+**Solo en un notebook concreto** (primera celda del notebook)
 
 ```python
 %%configure
@@ -47,7 +50,7 @@ El motor nativo ejecuta las consultas de Spark en C++ vectorizado (Velox + Apach
 }
 ```
 
-### Paso 2: comprobar que se está usando
+### Paso 2. Comprobar que se está usando
 
 ```python
 from pyspark.sql import functions as F
@@ -67,15 +70,15 @@ resumen = (
 resumen.explain()
 ```
 
-Qué buscar:
+En la salida hay que fijarse en tres cosas.
 
 - El `print` devuelve `true`.
-- En el plan, nodos que terminan en **Transformer** (`ProjectExecTransformer`, `HashAggregateTransformer`...) o que contienen **NativeFileScan** o **VeloxColumnarToRowExec**: esa parte la ejecuta el motor nativo.
-- Nodos normales (`HashAggregate`, `Filter`) sin ese sufijo: esa parte ha hecho fallback.
+- Si en el plan aparecen nodos que terminan en **Transformer** (`ProjectExecTransformer`, `HashAggregateTransformer`...) o que contienen **NativeFileScan** o **VeloxColumnarToRowExec**, esa parte la ejecuta el motor nativo.
+- Si aparecen nodos normales (`HashAggregate`, `Filter`) sin ese sufijo, esa parte ha hecho fallback.
 
 Sin código también se ve en los avisos del Spark Advisor debajo de la celda, y en la Spark UI, pestaña **Gluten SQL / DataFrame** (nodos en verde = nativo, azul claro = JVM).
 
-### Paso 3: comparar tiempos con y sin el motor
+### Paso 3. Comparar tiempos con y sin el motor
 
 ```python
 import time
@@ -111,25 +114,25 @@ print(f"Motor nativo:  {t_nativo:.2f} s")
 print(f"Mejora:        {t_clasico / t_nativo:.1f}x")
 ```
 
-Para que la comparación sea justa: usar una tabla grande (millones de filas) y una consulta parecida a las reales. El código deja el motor activado al terminar.
+Para que la comparación sea justa, conviene usar una tabla grande (millones de filas) y una consulta parecida a las reales. El código deja el motor activado al terminar.
 
-**Resultado:** menos tiempo de ejecución, y por tanto menos consumo de CU, sin tocar el código existente.
+**Resultado.** Menos tiempo de ejecución, y por tanto menos consumo de CU, sin tocar el código existente.
 
-## Punto 2: reducir las UDFs de Python
+## 2. Reducir las UDFs de Python
 
-Una UDF (User Defined Function) es una función propia que se registra para aplicarla sobre columnas cuando Spark no trae una función que haga lo que necesitas. El motor nativo ya soporta UDFs de Python, pero siguen siendo lentas: los datos salen del motor, se envían a un proceso de Python y vuelven, y el optimizador no puede ver qué hacen por dentro.
+Una UDF (User Defined Function) es una función propia que se registra para aplicarla sobre columnas cuando Spark no trae una función que haga lo que necesitas. El motor nativo ya soporta UDFs de Python, pero siguen siendo lentas, porque los datos salen del motor, se envían a un proceso de Python y vuelven, y el optimizador no puede ver qué hacen por dentro.
 
-Tipos habituales:
+Hay tres tipos habituales.
 
-- **UDF de Python**: la más común en notebooks.
-- **Pandas UDF**: procesa por bloques con pandas, más rápida que la anterior.
-- **UDF de SQL**: novedad de Spark 4, se ejecuta dentro del motor.
+- **UDF de Python.** La más común en notebooks.
+- **Pandas UDF.** Procesa por bloques con pandas, más rápida que la anterior.
+- **UDF de SQL.** Novedad de Spark 4, se ejecuta dentro del motor.
 
-### Paso 1: localizar UDFs y sustituirlas por funciones nativas
+### Paso 1. Localizar las UDFs y sustituirlas por funciones nativas
 
 Buscar en los notebooks `@udf`, `F.udf(`, `@pandas_udf` y `spark.udf.register`. Las de limpieza de texto, condiciones, fechas o redondeos casi siempre se pueden reescribir con `pyspark.sql.functions`.
 
-**Antes: UDF de Python**
+**Antes, con una UDF de Python**
 
 ```python
 from pyspark.sql import functions as F
@@ -146,7 +149,7 @@ def limpiar_codigo(codigo):
 df = df.withColumn("codigo_limpio", limpiar_codigo("codigo"))
 ```
 
-**Después: funciones nativas**
+**Después, con funciones nativas**
 
 ```python
 from pyspark.sql import functions as F
@@ -157,7 +160,7 @@ df = df.withColumn(
 )
 ```
 
-**Otro ejemplo: clasificación con condiciones**
+**Otro ejemplo, una clasificación con condiciones**
 
 ```python
 # En lugar de una UDF con if/else, usamos when/otherwise
@@ -171,7 +174,7 @@ df = df.withColumn(
 
 Mismo resultado, los nulos se gestionan solos y todo se queda dentro del motor.
 
-### Paso 2: lógica reutilizable como UDF de SQL
+### Paso 2. Lógica reutilizable como UDF de SQL
 
 Cuando la misma transformación se repite en varios notebooks, se puede guardar como función SQL y usarla en cualquier celda `%%sql` o en `spark.sql()`.
 
@@ -189,9 +192,9 @@ SELECT codigo, limpiar_codigo(codigo) AS codigo_limpio
 FROM silver_productos
 ```
 
-**Resultado:** transformaciones más rápidas y lógica de negocio centralizada sin pasar por Python.
+**Resultado.** Transformaciones más rápidas y lógica de negocio centralizada sin pasar por Python.
 
-## Punto 3: resource profile según la capa
+## 3. Resource profile según la capa
 
 Un resource profile es un conjunto de configuraciones de Spark predefinido que cambia sobre todo cómo se escriben los ficheros Delta. Por eso importa en el notebook que escribe la tabla, no en el que la lee. Los workspaces nuevos usan `writeHeavy`, que desactiva V-Order.
 
@@ -202,11 +205,11 @@ Un resource profile es un conjunto de configuraciones de Spark predefinido que c
 | `readHeavyForSpark` | Tablas que se leen mucho desde Spark | Optimize write, ficheros de 128 MB |
 | `custom` | Configuración propia | Lo que definas |
 
-- **V-Order**: optimización de Fabric que ordena y comprime los Parquet para que Power BI (Direct Lake) y el SQL endpoint lean más rápido. Escribir tarda algo más.
-- **Optimize write**: genera menos ficheros y más grandes al escribir.
-- **Bin size**: tamaño objetivo de esos ficheros.
+- **V-Order.** Optimización de Fabric que ordena y comprime los Parquet para que Power BI (Direct Lake) y el SQL endpoint lean más rápido. Escribir tarda algo más.
+- **Optimize write.** Genera menos ficheros y más grandes al escribir.
+- **Bin size.** Tamaño objetivo de esos ficheros.
 
-### Paso 1: revisar con qué configuración escribe el notebook
+### Paso 1. Revisar con qué configuración escribe el notebook
 
 ```python
 # Revisamos con qué configuración se están escribiendo las tablas
@@ -222,11 +225,11 @@ except Exception:
 print("Optimize write:", optimize_write)
 ```
 
-Resultado en el notebook de gold revisado: perfil `writeHeavy`, V-Order `false`, optimize write `None`. Correcto para bronze y silver; mejorable para gold que consume Power BI.
+En el notebook de gold revisado, el resultado fue perfil `writeHeavy`, V-Order `false` y optimize write `None`. Es correcto para bronze y silver, pero mejorable para una capa gold que consume Power BI.
 
-### Paso 2: aplicar `readHeavyForPBI` en el notebook de gold
+### Paso 2. Aplicar `readHeavyForPBI` en el notebook de gold
 
-Primera celda del notebook, antes de cualquier escritura:
+Va en la primera celda del notebook, antes de cualquier escritura.
 
 ```python
 # Las tablas de esta capa las lee Power BI, así que priorizamos la lectura
@@ -236,13 +239,13 @@ print("Perfil:  ", spark.conf.get("spark.fabric.resourceProfile"))
 print("V-Order: ", spark.conf.get("spark.sql.parquet.vorder.default"))
 ```
 
-Debe devolver `readHeavyForPBI` y `true`. A tener en cuenta:
+Debe devolver `readHeavyForPBI` y `true`. Hay que tener en cuenta tres cosas.
 
 - Solo afecta a lo que se escribe desde ese momento; los ficheros existentes siguen igual (se resuelve en el paso 3).
 - La escritura será algo más lenta a cambio de lecturas más rápidas en Power BI.
 - Con varios notebooks de gold, se puede fijar en un environment propio de gold con `spark.fabric.resourceProfile = readHeavyForPBI`. Si se define en los dos sitios, manda el notebook.
 
-### Paso 3: comprobar la tabla y aplicar V-Order a los datos existentes
+### Paso 3. Comprobar la tabla y aplicar V-Order a los datos existentes
 
 ```sql
 %%sql
@@ -262,16 +265,16 @@ OPTIMIZE gold_ventas VORDER
 ALTER TABLE gold_ventas SET TBLPROPERTIES ('delta.parquet.vorder.enabled' = 'true')
 ```
 
-- El `OPTIMIZE` reescribe la tabla y consume capacidad: en tablas grandes, mejor fuera de horario.
+- El `OPTIMIZE` reescribe la tabla y consume capacidad, así que en tablas grandes conviene lanzarlo fuera de horario.
 - Los ficheros antiguos se mantienen para el historial hasta que se ejecute un `VACUUM`.
 - Al repetir el `DESCRIBE DETAIL`, `numFiles` debería bajar y `properties` mostrar `delta.parquet.vorder.enabled -> true`.
-- La prueba final: comparar en Power BI el tiempo de carga de los visuales con el Analizador de rendimiento.
+- La prueba final es comparar en Power BI el tiempo de carga de los visuales con el Analizador de rendimiento.
 
-**Resultado:** las tablas de gold quedan optimizadas para Power BI, ahora y en las escrituras futuras.
+**Resultado.** Las tablas de gold quedan optimizadas para Power BI, ahora y en las escrituras futuras.
 
-## Punto 4: collation en lugar de lower()
+## 4. Collation en lugar de lower()
 
-Una collation es la regla que define cómo se comparan y ordenan los textos. Spark 4 permite indicarla en la consulta, en lugar de llenar filtros y joins de `lower()` y `upper()`. Se usa en las consultas, no en la definición de columnas: guardar una collation en una tabla Delta puede impedir que el SQL endpoint o Power BI la lean.
+Una collation es la regla que define cómo se comparan y ordenan los textos. Spark 4 permite indicarla en la consulta, en lugar de llenar filtros y joins de `lower()` y `upper()`. Se usa en las consultas, no en la definición de columnas, porque guardar una collation en una tabla Delta puede impedir que el SQL endpoint o Power BI la lean.
 
 | Collation | Mayúsculas | Tildes | Uso típico |
 | --- | --- | --- | --- |
@@ -280,7 +283,7 @@ Una collation es la regla que define cómo se comparan y ordenan los textos. Spa
 | `UNICODE_CI` | No distingue | Distingue | Ordenación correcta según Unicode |
 | `UNICODE_CI_AI` | No distingue | No distingue | Nombres y direcciones con tildes inconsistentes |
 
-### Paso 1: probar cómo funcionan
+### Paso 1. Probar cómo funcionan
 
 ```sql
 %%sql
@@ -292,9 +295,9 @@ SELECT
     'José' COLLATE UNICODE_CI_AI = 'jose'    AS sin_mayusculas_ni_tildes
 ```
 
-Resultado esperado: `false`, `true`, `false`, `true`.
+El resultado esperado es `false`, `true`, `false` y `true`.
 
-### Paso 2: sustituir lower() en filtros, joins y agrupaciones
+### Paso 2. Sustituir lower() en filtros, joins y agrupaciones
 
 **Filtros**
 
@@ -330,7 +333,7 @@ JOIN silver_usuarios u
   ON trim(c.email) COLLATE UTF8_LCASE = trim(u.email);
 ```
 
-Basta con la collation en un lado. El `trim()` sigue haciendo falta: la collation no afecta a los espacios.
+Basta con la collation en un lado. El `trim()` sigue haciendo falta, porque la collation no afecta a los espacios.
 
 **PySpark**
 
@@ -362,11 +365,11 @@ GROUP BY provincia COLLATE UTF8_LCASE;
 ```
 
 - El texto del resultado es uno cualquiera de los valores del grupo, no uno normalizado. Para informes, mejor `initcap()` o `upper()`.
-- La columna resultante conserva la collation: si se guarda en una tabla Delta, la collation va con ella.
+- La columna resultante conserva la collation, así que si se guarda en una tabla Delta, la collation va con ella.
 
-Regla práctica: en filtros y joins, collation sin miedo; en agrupaciones o columnas que se van a guardar, normalizar el texto o quitar la collation antes de escribir.
+La regla práctica es usar la collation sin miedo en filtros y joins. En agrupaciones o en columnas que se van a guardar, conviene normalizar el texto o quitar la collation antes de escribir.
 
-### Paso 3: detectar y evitar columnas guardadas con collation
+### Paso 3. Detectar y evitar columnas guardadas con collation
 
 **Comprobar una tabla existente**
 
@@ -411,9 +414,9 @@ FROM gold_clientes
 
 La columna pasa al final y la funcionalidad puede seguir figurando en `tableFeatures`. Si la tabla la consume Power BI y sigue apareciendo, lo más limpio es crear una tabla nueva y apuntar el modelo a ella.
 
-**Resultado:** comparaciones de texto más limpias y sin `lower()` repartidos por el código, sin romper la compatibilidad de las tablas de gold.
+**Resultado.** Comparaciones de texto más limpias y sin `lower()` repartidos por el código, sin romper la compatibilidad de las tablas de gold.
 
-## Punto 5: VARIANT para datos JSON
+## 5. VARIANT para datos JSON
 
 VARIANT es un tipo de dato que acepta cualquier estructura JSON sin definir esquema y la guarda ya analizada en formato binario, así que leer un campo es mucho más rápido que buscarlo en un texto. Se usa para procesar en Spark; las tablas que lee Power BI o el SQL endpoint deben tener los campos ya extraídos en columnas normales, porque guardar VARIANT en Delta activa una funcionalidad nueva del protocolo.
 
@@ -427,7 +430,7 @@ VARIANT es un tipo de dato que acepta cualquier estructura JSON sin definir esqu
 | `schema_of_variant_agg(v)` | Estructura combinada de todos los registros |
 | `variant_explode(v)` | Una fila por cada elemento de una lista u objeto |
 
-### Paso 1: probar cómo funciona
+### Paso 1. Probar cómo funciona
 
 ```sql
 %%sql
@@ -447,11 +450,11 @@ FROM (
 - `telefono` sale NULL porque el campo no existe, sin que la consulta falle.
 - `nombre_como_numero` sale NULL porque el tipo no encaja; con `variant_get` y el modo ANSI daría error.
 
-### Paso 2: ingesta real de bronze a silver
+### Paso 2. Ingesta real de bronze a silver
 
 Bronze guarda el JSON como texto y silver lo analiza con VARIANT y guarda columnas normales. Así no se guarda VARIANT en ninguna tabla.
 
-**Bronze: JSON en bruto**
+**Bronze, con el JSON en bruto**
 
 ```python
 from pyspark.sql import functions as F
@@ -468,7 +471,7 @@ bronze = (
 bronze.write.mode("append").saveAsTable("bronze_pedidos")
 ```
 
-**Silver: campos extraídos con su tipo**
+**Silver, con los campos extraídos y su tipo**
 
 ```sql
 %%sql
@@ -508,7 +511,7 @@ LATERAL variant_explode(variant_get(p.v, '$.lineas', 'variant')) l
 WHERE p.v IS NOT NULL
 ```
 
-Antes de adaptarlo, ver las rutas reales del JSON:
+Antes de adaptarlo, conviene ver las rutas reales del JSON.
 
 ```sql
 %%sql
@@ -517,9 +520,9 @@ FROM bronze_pedidos
 LIMIT 5
 ```
 
-### Paso 3: detectar cambios en la estructura del JSON
+### Paso 3. Detectar cambios en la estructura del JSON
 
-Con `try_variant_get`, un campo renombrado en el origen no rompe la carga: llena la columna de NULL sin avisar. Este control lo detecta.
+Con `try_variant_get`, un campo renombrado en el origen no rompe la carga, pero llena la columna de NULL sin avisar. Este control lo detecta.
 
 **Vista rápida**
 
@@ -572,8 +575,8 @@ else:
     print("Estructura sin cambios")
 ```
 
-- **Campos nuevos:** información que no se está guardando; puede interesar añadirla a silver.
-- **Campos que ya no llegan:** esa columna de silver se llenará de NULL; suele ser un campo renombrado o eliminado.
+- **Campos nuevos.** Es información que no se está guardando, y puede interesar añadirla a silver.
+- **Campos que ya no llegan.** Esa columna de silver se llenará de NULL. Suele ser un campo renombrado o eliminado.
 
 **Parar la carga si falta un campo**
 
@@ -585,9 +588,9 @@ if any("ya no llegan" in c for c in cambios):
 
 Desde un pipeline de Fabric, el error hace fallar la actividad y permite configurar una alerta en esa rama.
 
-**Resultado:** ingestas de JSON que no se rompen cuando cambia el origen, con tablas de silver en columnas normales y un aviso cuando la estructura cambia.
+**Resultado.** Ingestas de JSON que no se rompen cuando cambia el origen, con tablas de silver en columnas normales y un aviso cuando la estructura cambia.
 
-## Punto 6: variables de sesión
+## 6. Variables de sesión
 
 Las variables de sesión permiten declarar un valor en SQL y reutilizarlo en las consultas siguientes, sin construir la consulta en Python con f-strings. Duran lo que dura la sesión de Spark, así que una variable declarada en una celda `%%sql` sigue disponible en las siguientes.
 
@@ -599,9 +602,9 @@ Las variables de sesión permiten declarar un valor en SQL y reutilizarlo en las
 | `SET VAR nombre = (SELECT ...)` | Le asigna el resultado de una consulta |
 | `DROP TEMPORARY VARIABLE nombre` | La elimina |
 
-### Paso 1: probar cómo funcionan
+### Paso 1. Probar cómo funcionan
 
-Cada bloque en una celda distinta, para comprobar que la variable se mantiene entre celdas:
+Cada bloque va en una celda distinta, para comprobar que la variable se mantiene entre celdas.
 
 ```sql
 %%sql
@@ -628,7 +631,7 @@ SET VAR v_fecha_carga = DATE'2026-09-15';
 SELECT v_fecha_carga;
 ```
 
-También se le puede asignar un valor calculado a partir de los datos:
+También se le puede asignar un valor calculado a partir de los datos.
 
 ```sql
 %%sql
@@ -639,11 +642,11 @@ SET VAR v_ultima_fecha = (SELECT max(fecha) FROM silver_ventas);
 SELECT v_ultima_fecha;
 ```
 
-### Paso 2: carga incremental y notebook parametrizado desde un pipeline
+### Paso 2. Carga incremental y notebook parametrizado desde un pipeline
 
 El notebook carga solo lo nuevo desde la última ejecución, pero el pipeline puede indicarle una fecha para reprocesar.
 
-**Celda 1: parámetro del pipeline (Python)**
+**Celda 1. Parámetro del pipeline (Python)**
 
 ```python
 # Vacío = carga incremental normal. Con fecha = reprocesar desde ese día
@@ -652,7 +655,7 @@ fecha_desde = ""
 
 Marcarla como celda de parámetros (menú de la celda > Alternar celda de parámetros).
 
-**Celda 2: decidir desde dónde cargar (SQL)**
+**Celda 2. Decidir desde dónde cargar (SQL)**
 
 ```sql
 %%sql
@@ -665,7 +668,7 @@ SET VAR v_cargar_desde = (
 );
 ```
 
-**Celda 3: si llega una fecha desde el pipeline, manda esa (Python)**
+**Celda 3. Si llega una fecha desde el pipeline, manda esa (Python)**
 
 ```python
 # El valor viaja como parámetro, sin concatenarlo dentro de la consulta
@@ -678,7 +681,7 @@ if fecha_desde:
 spark.sql("SELECT v_cargar_desde").show()
 ```
 
-**Celda 4: carga incremental (SQL)**
+**Celda 4. Carga incremental (SQL)**
 
 ```sql
 %%sql
@@ -708,19 +711,19 @@ WHEN NOT MATCHED THEN INSERT *
 
 **Configuración en el pipeline**
 
-Actividad Notebook > Configuración > Parámetros base:
+El parámetro se define en la actividad Notebook, en Configuración > Parámetros base.
 
 | Nombre | Tipo | Valor |
 | --- | --- | --- |
 | `fecha_desde` | String | Vacío para la carga diaria, o una fecha como `2026-09-01` para reprocesar |
 
-- **Carga diaria:** `fecha_desde` vacío, se cargan solo los registros nuevos.
-- **Reproceso:** con una fecha, se reprocesa desde ese día sin duplicar gracias al `MERGE`.
-- **Primera ejecución:** silver vacía, `coalesce` devuelve 1900 y se carga todo bronze.
+- **Carga diaria.** Con `fecha_desde` vacío, se cargan solo los registros nuevos.
+- **Reproceso.** Con una fecha, se reprocesa desde ese día sin duplicar gracias al `MERGE`.
+- **Primera ejecución.** Con silver vacía, `coalesce` devuelve 1900 y se carga todo bronze.
 
-### Paso 3: buenas prácticas
+### Paso 3. Buenas prácticas
 
-**Prefijo para no chocar con columnas.** Si una variable y una columna se llaman igual, Spark usa la columna sin avisar. Usar el prefijo `v_` en todas las variables, o calificar con `session.`:
+**Prefijo para no chocar con columnas.** Si una variable y una columna se llaman igual, Spark usa la columna sin avisar. Conviene usar el prefijo `v_` en todas las variables, o calificarlas con `session.` como en este ejemplo.
 
 ```sql
 %%sql
@@ -760,11 +763,11 @@ SELECT
 DROP TEMPORARY VARIABLE IF EXISTS v_cargar_desde;
 ```
 
-**Resultado:** notebooks parametrizables y cargas incrementales escritas en SQL, sin f-strings y con un registro de cada ejecución.
+**Resultado.** Notebooks parametrizables y cargas incrementales escritas en SQL, sin f-strings y con un registro de cada ejecución.
 
-## Punto 7: pipe syntax
+## 7. Pipe syntax
 
-La pipe syntax permite escribir una consulta en el mismo orden en que se ejecuta: se parte de la tabla y se encadenan pasos con `|>`, sin subconsultas ni CTEs intermedios. No cambia el rendimiento (Spark genera el mismo plan), solo mejora la legibilidad, y se puede mezclar con SQL clásico.
+La pipe syntax permite escribir una consulta en el mismo orden en que se ejecuta. Se parte de la tabla y se encadenan pasos con `|>`, sin subconsultas ni CTEs intermedios. No cambia el rendimiento (Spark genera el mismo plan), solo mejora la legibilidad, y se puede mezclar con SQL clásico.
 
 | Operador | Qué hace | Equivalente clásico |
 | --- | --- | --- |
@@ -778,9 +781,9 @@ La pipe syntax permite escribir una consulta en el mismo orden en que se ejecuta
 | `\|> SELECT` | Elige las columnas finales | `SELECT` |
 | `\|> ORDER BY` / `\|> LIMIT` | Ordena y limita | Igual |
 
-### Paso 1: la misma consulta de las dos formas
+### Paso 1. La misma consulta de las dos formas
 
-Forma clásica:
+**Forma clásica**
 
 ```sql
 %%sql
@@ -797,7 +800,7 @@ HAVING sum(importe_con_iva) > 10000
 ORDER BY total DESC
 ```
 
-Con pipe syntax:
+**Con pipe syntax**
 
 ```sql
 %%sql
@@ -811,9 +814,9 @@ FROM silver_ventas
 
 Se lee de arriba abajo, el `WHERE` tras agregar sustituye al `HAVING`, y `EXTEND` añade la columna sin repetir las demás.
 
-### Paso 2: caso real con joins y transformaciones encadenadas
+### Paso 2. Un caso real con joins y transformaciones encadenadas
 
-Ventas mensuales por cliente, con segmento y ranking del mes.
+El ejemplo calcula las ventas mensuales por cliente, con segmento y ranking del mes.
 
 **Forma clásica con CTEs**
 
@@ -870,7 +873,7 @@ FROM silver_pedidos AS p
 |> ORDER BY mes, ranking_mes
 ```
 
-**Depurar paso a paso:** basta con cortar la consulta en el punto que se quiere revisar.
+**Depurar paso a paso.** Basta con cortar la consulta en el punto que se quiere revisar.
 
 ```sql
 %%sql
@@ -899,13 +902,13 @@ FROM silver_pedidos AS p
        rank() OVER (PARTITION BY mes ORDER BY total_mes DESC)        AS ranking_mes
 ```
 
-- **Usarla en:** transformaciones largas, consultas que se depuran a menudo, notebooks nuevos.
-- **No hace falta en:** consultas cortas o código existente que funciona; no mejora el rendimiento.
-- **Equipo:** acordarlo si otras personas mantienen los notebooks, porque es una sintaxis nueva.
+- **Cuándo usarla.** En transformaciones largas, en consultas que se depuran a menudo y en notebooks nuevos.
+- **Cuándo no hace falta.** En consultas cortas o en código existente que funciona, porque no mejora el rendimiento.
+- **En equipo.** Conviene acordarlo si otras personas mantienen los notebooks, porque es una sintaxis nueva.
 
-**Resultado:** transformaciones SQL largas más fáciles de leer, mantener y depurar.
+**Resultado.** Transformaciones SQL largas más fáciles de leer, mantener y depurar.
 
-## Punto 8: gráficos rápidos sin pasar a pandas
+## 8. Gráficos rápidos sin pasar a pandas
 
 Spark 4 añade `df.plot` sobre los DataFrames de PySpark, con Plotly por debajo (gráficos interactivos). Evita `toPandas()`, que trae todos los datos al driver. Los histogramas y box plots se calculan en Spark de forma distribuida; para barras, líneas o tarta solo se usa un número limitado de filas, así que hay que agregar antes de dibujar. Es para explorar mientras se desarrolla; los informes siguen siendo cosa de Power BI.
 
@@ -918,7 +921,7 @@ Spark 4 añade `df.plot` sobre los DataFrames de PySpark, con Plotly por debajo 
 | Qué categorías pesan más | `plot.bar` o `plot.barh` |
 | Relación entre dos variables numéricas | `plot.scatter` |
 
-### Paso 1: probar cómo funciona
+### Paso 1. Probar cómo funciona
 
 ```python
 # Datos de ejemplo: ventas por mes
@@ -936,7 +939,7 @@ df.plot.line(x="mes", y="ventas")
 df.plot.bar(x="mes", y="ventas")
 ```
 
-### Paso 2: explorar y validar una tabla real
+### Paso 2. Explorar y validar una tabla real
 
 **Evolución de ventas por mes**
 
@@ -1005,11 +1008,13 @@ top_provincias = (
 top_provincias.plot.barh(x="ventas", y="provincia")
 ```
 
-**Resultado:** exploración y validación visual de tablas grandes sin riesgo de saturar el driver.
+**Resultado.** Exploración y validación visual de tablas grandes sin riesgo de saturar el driver.
 
-## Punto 9: Liquid Clustering
+## 9. Liquid Clustering
 
 Liquid Clustering agrupa los datos por las columnas elegidas para que Spark, el SQL endpoint y Power BI lean solo los ficheros necesarios. Sustituye al particionado y al Z-order (no se combina con ellos), y a diferencia de VARIANT o collations está soportado fuera de Spark, así que se puede usar en gold.
+
+La tabla siguiente compara las tres formas de organizar los datos. Hay más detalle en [Z-order, liquid clustering y V-Order](z-order-liquid-clustering-y-v-order.md).
 
 |  | Particionado | Z-order | Liquid Clustering |
 | --- | --- | --- | --- |
@@ -1018,6 +1023,8 @@ Liquid Clustering agrupa los datos por las columnas elegidas para que Spark, el 
 | Coste de mantenimiento | Ninguno, pero rígido | Reescribe toda la tabla | Solo lo no agrupado |
 | Cambiar columnas | Recrear la tabla | Otro `OPTIMIZE` completo | `ALTER TABLE ... CLUSTER BY` |
 | Problema típico | Miles de ficheros pequeños | Caro en tablas grandes | Necesita `OPTIMIZE` periódico |
+
+Así queda el soporte en cada experiencia de Fabric.
 
 | Experiencia de Fabric | Liquid Clustering |
 | --- | --- |
@@ -1028,9 +1035,9 @@ Liquid Clustering agrupa los datos por las columnas elegidas para que Spark, el 
 | Spark Runtime 1.2 y 1.1 | Solo lectura |
 | Notebooks de Python (no PySpark) | No |
 
-Aviso relacionado con Runtime 2.0: las tablas que crea usan deletion vectors por defecto (protocolo 3/7). Power BI y el SQL endpoint las leen, pero los notebooks de Python puro (`deltalake`, Polars) no.
+Un aviso relacionado con Runtime 2.0. Las tablas que crea usan [deletion vectors](deletion-vectors-en-delta-lake.md) por defecto (protocolo 3/7). Power BI y el SQL endpoint las leen, pero los notebooks de Python puro (`deltalake`, Polars) no.
 
-### Paso 1: probar cómo funciona
+### Paso 1. Probar cómo funciona
 
 ```sql
 %%sql
@@ -1055,7 +1062,9 @@ INSERT INTO prueba_clustering VALUES
 DESCRIBE DETAIL prueba_clustering
 ```
 
-### Paso 2: elegir las columnas y migrar una tabla existente
+### Paso 2. Elegir las columnas y migrar una tabla existente
+
+Para elegir las columnas de clustering sirven cuatro criterios.
 
 - Las columnas por las que más se filtra (en notebooks y en filtros de Power BI), normalmente una fecha y una o dos dimensiones.
 - Máximo 4 columnas; con 1 o 2 bien elegidas suele bastar.
@@ -1068,7 +1077,7 @@ DESCRIBE DETAIL prueba_clustering
 DESCRIBE DETAIL gold_ventas
 ```
 
-**Caso A: tabla sin particionar (con o sin Z-order)**
+**Caso A. Tabla sin particionar (con o sin Z-order)**
 
 ```sql
 %%sql
@@ -1084,7 +1093,7 @@ OPTIMIZE gold_ventas FULL;
 
 El `OPTIMIZE FULL` reescribe toda la tabla una sola vez; después basta con `OPTIMIZE` normal.
 
-**Caso B: tabla particionada (hay que recrearla)**
+**Caso B. Tabla particionada (hay que recrearla)**
 
 ```sql
 %%sql
@@ -1108,7 +1117,7 @@ ALTER TABLE gold_ventas RENAME TO gold_ventas_old;
 ALTER TABLE gold_ventas_nueva RENAME TO gold_ventas;
 ```
 
-Cuando todo esté comprobado: `DROP TABLE gold_ventas_old`.
+Cuando todo esté comprobado, la antigua se borra con `DROP TABLE gold_ventas_old`.
 
 **Adaptar el notebook que carga la tabla**
 
@@ -1122,7 +1131,7 @@ columnas = spark.table("gold_ventas").columns
 df.select(columnas).write.mode("overwrite").insertInto("gold_ventas")
 ```
 
-### Paso 3: mantenimiento y comprobación
+### Paso 3. Mantenimiento y comprobación
 
 | Volumen de carga | Frecuencia de OPTIMIZE |
 | --- | --- |
@@ -1139,7 +1148,7 @@ for tabla in tablas:
     spark.sql(f"OPTIMIZE {tabla}")
 ```
 
-Sin código: en el lakehouse, clic derecho sobre la tabla > Mantenimiento.
+Sin código, se hace desde el lakehouse con clic derecho sobre la tabla > Mantenimiento.
 
 **Qué ha hecho cada OPTIMIZE**
 
@@ -1173,9 +1182,9 @@ WHERE fecha = DATE'2026-09-15' AND id_tienda = 12
 
 Si la tabla tiene cientos de ficheros y los datos del filtro están en unos pocos, el clustering funciona. La cifra exacta de ficheros leídos está en la Spark UI, pestaña SQL / DataFrame, nodo de lectura de la tabla.
 
-**Resultado:** tablas organizadas para leer menos datos en Spark, el SQL endpoint y Power BI, con un mantenimiento barato e incremental.
+**Resultado.** Tablas organizadas para leer menos datos en Spark, el SQL endpoint y Power BI, con un mantenimiento barato e incremental.
 
-## Punto 10: Python Data Source para ingestas desde APIs
+## 10. Python Data Source para ingestas desde APIs
 
 La Python Data Source API permite escribir un conector propio en Python y usarlo como un formato nativo (`spark.read.format("mi_api")`). Si el conector divide el trabajo en particiones, Spark las ejecuta en paralelo en los ejecutores en lugar de hacerlo todo en el driver. Compensa para APIs que se usan en varios notebooks o con mucho volumen; para una llamada puntual con pocos datos, `requests` en el driver sigue siendo lo más sencillo.
 
@@ -1187,7 +1196,7 @@ La Python Data Source API permite escribir un conector propio en Python y usarlo
 | `read(partition)` | Devuelve las filas de una parte con `yield` |
 | `spark.dataSource.register(...)` | Registra el conector en la sesión |
 
-### Paso 1: probar la estructura con datos fijos
+### Paso 1. Probar la estructura con datos fijos
 
 ```python
 from pyspark.sql.datasource import DataSource, DataSourceReader
@@ -1222,11 +1231,11 @@ df = spark.read.format("fuente_prueba").option("filas", 5).load()
 df.show()
 ```
 
-### Paso 2: conector real con paginación y reintentos
+### Paso 2. Conector real con paginación y reintentos
 
-Supuesto: la API devuelve los pedidos de un día paginados, con la forma `{ "datos": [...], "hay_mas": true }`. El conector crea una partición por día (descargados en paralelo), recorre las páginas de cada día y devuelve cada registro como JSON en texto, para encajar con el patrón bronze/silver del punto 5. La sesión HTTP reintenta sola hasta 5 veces ante errores 429 y 5xx, con esperas crecientes y respetando la cabecera `Retry-After`.
+El ejemplo supone una API que devuelve los pedidos de un día paginados, con la forma `{ "datos": [...], "hay_mas": true }`. El conector crea una partición por día (descargados en paralelo), recorre las páginas de cada día y devuelve cada registro como JSON en texto, para encajar con el patrón bronze/silver del punto 5. La sesión HTTP reintenta sola hasta 5 veces ante errores 429 y 5xx, con esperas crecientes y respetando la cabecera `Retry-After`.
 
-Guardar este código en un notebook propio, por ejemplo `nb_conector_api_pedidos`:
+Este código va en un notebook propio, por ejemplo `nb_conector_api_pedidos`.
 
 ```python
 from datetime import date, timedelta
@@ -1309,7 +1318,7 @@ class LectorApiPedidos(DataSourceReader):
 spark.dataSource.register(ApiPedidos)
 ```
 
-### Paso 3: usarlo desde cualquier notebook
+### Paso 3. Usarlo desde cualquier notebook
 
 ```python
 %run nb_conector_api_pedidos
@@ -1341,12 +1350,12 @@ pedidos = (
 
 A partir de aquí, el notebook de silver del punto 5 funciona igual sobre `json_original`.
 
-- **Límites de la API:** muchas particiones en paralelo pueden provocar errores 429; reducir el rango por carga o agrupar varios días por partición.
-- **Registro por sesión:** `spark.dataSource.register` solo vale para la sesión actual; el `%run` lo resuelve en cada notebook.
-- **Uso por todo el equipo:** empaquetar el conector como librería `.whl` y subirla al environment en Bibliotecas > Personalizado.
-- **Token como opción:** puede aparecer en planes o logs de la Spark UI; si la API lo permite, mejor que el lector obtenga el token por sí mismo.
+- **Límites de la API.** Muchas particiones en paralelo pueden provocar errores 429. Conviene reducir el rango por carga o agrupar varios días por partición.
+- **Registro por sesión.** `spark.dataSource.register` solo vale para la sesión actual, y el `%run` lo resuelve en cada notebook.
+- **Uso por todo el equipo.** Conviene empaquetar el conector como librería `.whl` y subirla al environment en Bibliotecas > Personalizado.
+- **Token como opción.** Puede aparecer en planes o logs de la Spark UI. Si la API lo permite, es mejor que el lector obtenga el token por sí mismo.
 
-**Resultado:** ingestas desde APIs en paralelo, resistentes a fallos puntuales y reutilizables con un simple `spark.read.format(...)`.
+**Resultado.** Ingestas desde APIs en paralelo, resistentes a fallos puntuales y reutilizables con un simple `spark.read.format(...)`.
 
 ## Fuentes
 

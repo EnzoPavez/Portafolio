@@ -1,15 +1,17 @@
 // Acciones de un archivo (compartir, copiar como Markdown y ver el original).
 // Se arman dos veces, fijas abajo a la izquierda en pantallas anchas y al final del texto en las demás.
 
-import { escapar } from "./datos.js";
+import { enlaceParaCompartir, escapar } from "./datos.js";
 import { icono, iconoCambio } from "./iconos.js";
 
 const DURACION_AVISO = 2000;
 
 export function crearAcciones(archivo) {
-  const enlace = `${location.origin}${location.pathname}?a=${archivo.slug}`;
+  const enlace = enlaceParaCompartir(archivo.slug);
   const markdown = comoMarkdown(archivo);
-  const textoCompartir = archivo.bajada ? `${archivo.titulo}. ${archivo.bajada}` : archivo.titulo;
+  // En WhatsApp el título va en negrita (*así*) y el enlace en su propia línea, que es donde
+  // WhatsApp arma la vista previa con la imagen.
+  const textoWhatsApp = `${[`*${archivo.titulo}*`, archivo.bajada].filter(Boolean).join("\n")}\n\n${enlace}`;
 
   const estado = document.createElement("span");
   estado.className = "solo-lectores";
@@ -31,7 +33,7 @@ export function crearAcciones(archivo) {
           <button type="button" class="accion" data-copiar-enlace><span class="submenu-texto">${iconoCambio("enlace", "check")}<span data-texto>Copiar enlace</span></span></button>
         </div>
         <div class="submenu-entrada" style="--i:1">
-          <a class="accion" href="https://wa.me/?text=${encodeURIComponent(`${textoCompartir} ${enlace}`)}" target="_blank" rel="noopener noreferrer"><span class="submenu-texto">${icono("mensaje")}WhatsApp</span></a>
+          <a class="accion" href="https://wa.me/?text=${encodeURIComponent(textoWhatsApp)}" target="_blank" rel="noopener noreferrer"><span class="submenu-texto">${icono("mensaje")}WhatsApp</span></a>
         </div>
         <div class="submenu-entrada" style="--i:2">
           <a class="accion" href="https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(enlace)}" target="_blank" rel="noopener noreferrer"><span class="submenu-texto">${icono("maletin")}LinkedIn</span></a>

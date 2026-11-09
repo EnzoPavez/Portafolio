@@ -1,0 +1,253 @@
+/* Estilos compartidos del portafolio. Los usan la portada y las subpáginas, para que
+   todo se sienta un solo sitio. Cada página suma solo lo suyo.
+   Las letras (Fraunces e Inter) se cargan en cada página desde Google Fonts. */
+
+/* Modo claro por defecto. El oscuro se aplica si el sistema lo pide, salvo que la persona
+   haya elegido claro en la barra (data-tema="claro"), o si eligió oscuro (data-tema="oscuro").
+   Los dos bloques oscuros tienen que ser iguales. */
+:root {
+  color-scheme: light;
+  --fondo: #fcfcfc;
+  --fondo-hover: #f6f6f6;
+  --trazo: #e3e3e3;
+  --foco: #8d8d8d;
+  --texto: #202020;
+  --texto-suave: #646464;
+  --texto-tenue: #8a8a8a;
+  --tarjeta: #ffffff;
+  --sombra-tarjeta: 0 0 0 1px #0000000f, 0 1px 2px -1px #0000000f, 0 2px 4px 0 #0000000a;
+  --firma: #cf3b38;
+  --letra-chica: 13px;
+  --letra-base: 16px;
+  --letra-titulo: 30px;
+  --fuente-texto: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --fuente-titulo: "Fraunces", Georgia, "Times New Roman", serif;
+  --curva-revelar: cubic-bezier(.16, 1, .3, 1);
+  --ancho-etiqueta: 168px;
+  --ancho-texto: 608px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-tema="claro"]) {
+    color-scheme: dark;
+    --fondo: #0f0f0f;
+    --fondo-hover: #1c1c1c;
+    --trazo: #2c2c2c;
+    --foco: #6e6e6e;
+    --texto: #ededed;
+    --texto-suave: #b4b4b4;
+    --texto-tenue: #8c8c8c;
+    --tarjeta: #161616;
+    --sombra-tarjeta: 0 0 0 1px #ffffff1a, 0 1px 2px -1px #00000080, 0 2px 4px 0 #0006;
+    --firma: #ea5a51;
+  }
+}
+
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+  --fondo: #0f0f0f;
+  --fondo-hover: #1c1c1c;
+  --trazo: #2c2c2c;
+  --foco: #6e6e6e;
+  --texto: #ededed;
+  --texto-suave: #b4b4b4;
+  --texto-tenue: #8c8c8c;
+  --tarjeta: #161616;
+  --sombra-tarjeta: 0 0 0 1px #ffffff1a, 0 1px 2px -1px #00000080, 0 2px 4px 0 #0006;
+  --firma: #ea5a51;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { -webkit-tap-highlight-color: transparent; }
+
+/* Desplazamiento suave para los saltos del menú. Se activa con la clase "suave" recién
+   después de acomodar la página al entrar: si estuviera desde el principio, el salto
+   inicial a #seccion también sería suave y apuntaría a donde estaba la sección antes de
+   que cargara el contenido de más arriba. */
+@media (prefers-reduced-motion: no-preference) {
+  html.suave { scroll-behavior: smooth; }
+}
+
+/* Al saltar a una sección, su comienzo queda por debajo de la barra y de la niebla que
+   tiene abajo (46 px de barra más 100 px de niebla, o 72 px en el celular) */
+[id] { scroll-margin-top: 160px; }
+
+@media (max-width: 899px) {
+  [id] { scroll-margin-top: 128px; }
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--fuente-texto);
+  font-size: var(--letra-base);
+  line-height: 1.625;
+  font-feature-settings: "cv01";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a { color: inherit; }
+
+:focus-visible {
+  outline: 2px solid var(--foco);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* Entrada suave, en pasos de 120 ms (--paso en cada elemento) */
+.entrar {
+  animation: entrar .9s var(--curva-revelar) both;
+  animation-delay: calc(var(--paso, 0) * 120ms);
+}
+
+@keyframes entrar {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0);
+    filter: blur(4px);
+  }
+}
+
+/* Página. En pantallas anchas cada bloque lleva su nombre a la izquierda y el
+   contenido a la derecha. En las angostas el nombre va arriba. */
+.pagina {
+  max-width: calc(var(--ancho-etiqueta) + var(--ancho-texto) + 48px);
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+
+.bloque {
+  display: grid;
+  gap: 12px;
+  padding: 40px 0;
+  border-top: 1px solid var(--trazo);
+}
+
+.bloque-nombre {
+  margin: 0;
+  color: var(--texto-suave);
+  font-size: var(--letra-chica);
+  font-weight: 500;
+  line-height: 1.6;
+}
+
+.bloque-contenido { min-width: 0; }
+
+@media (min-width: 760px) {
+  .pagina { padding-top: 96px; }
+
+  .bloque {
+    grid-template-columns: var(--ancho-etiqueta) minmax(0, var(--ancho-texto));
+    gap: 0;
+    padding: 56px 0;
+  }
+
+  .sangria { margin-left: var(--ancho-etiqueta); }
+}
+
+/* Filas de una lista (experiencia, componentes, publicaciones...). Título y dato a
+   la izquierda y a la derecha, y una descripción debajo. */
+.filas {
+  display: grid;
+  gap: 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fila-cabeza {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2px 16px;
+}
+
+.fila-titulo {
+  margin: 0;
+  font-size: var(--letra-base);
+  font-weight: 550;
+  line-height: 1.45;
+}
+
+.fila-dato {
+  color: var(--texto-tenue);
+  font-size: var(--letra-chica);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fila-lugar {
+  color: var(--texto-suave);
+  font-weight: 400;
+}
+
+.fila-texto {
+  margin: 6px 0 0;
+  color: var(--texto-suave);
+  text-wrap: pretty;
+}
+
+/* Filas que son enlaces enteros */
+a.fila-enlace {
+  display: block;
+  margin: -10px -12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background-color .2s ease-out;
+}
+
+@media (hover: hover) {
+  a.fila-enlace:hover { background: var(--fondo-hover); }
+  a.fila-enlace:hover .flecha { translate: 2px 0; color: var(--texto); }
+}
+
+.flecha {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  margin-left: 4px;
+  color: var(--texto-tenue);
+  vertical-align: -1px;
+  transition: translate .3s var(--curva-revelar), color .2s ease-out;
+}
+
+/* Enlace de texto con flecha, para "ver todo" y enlaces externos */
+.enlace {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--texto);
+  font-size: 15px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: var(--trazo);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 4px;
+  transition: text-decoration-color .2s ease-out;
+}
+
+@media (hover: hover) {
+  .enlace:hover { text-decoration-color: var(--texto-suave); }
+  .enlace:hover .flecha { translate: 2px 0; color: var(--texto); }
+}
+
+.pie {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding-top: 32px;
+  border-top: 1px solid var(--trazo);
+  color: var(--texto-tenue);
+  font-size: var(--letra-chica);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .entrar { animation: none; }
+  *, *::before, *::after { transition-duration: 0s !important; }
+}
